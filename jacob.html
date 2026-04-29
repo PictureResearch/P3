@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pig Thermal Stress Classification — P3 Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0a0f1a;
+      --surface:   #111827;
+      --surface2:  #1a2438;
+      --border:    #1f2d45;
+      --accent:    #f97316;
+      --accent2:   #fb923c;
+      --blue:      #38bdf8;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --cold:      #60a5fa;
+      --neutral:   #a3e635;
+      --hot:       #f87171;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; gap: 2rem;
+      padding: .85rem 2.5rem;
+      background: rgba(10,15,26,.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: .95rem; font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    nav a {
+      color: var(--muted); text-decoration: none;
+      font-size: .85rem; font-weight: 600;
+      letter-spacing: .4px;
+      transition: color .2s;
+    }
+    nav a:hover { color: var(--accent); }
+    .nav-links { display: flex; gap: 1.8rem; }
+
+    /* ── HERO ── */
+    .hero {
+  position: relative; z-index: 1;
+  min-height: 480px;
+  display: flex; flex-direction: column;
+  align-items: center;          /* ← change this */
+  justify-content: center;      /* optional: vertical center too */
+  text-align: center;           /* helps text look centered */
+  padding: 6rem 2.5rem 4rem;
+  overflow: hidden;
+}
+    .hero-bg {
+      position: absolute; inset: 0; z-index: -1;
+      background:
+        radial-gradient(ellipse 60% 80% at 70% 50%, rgba(249,115,22,.12) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 60% at 10% 80%, rgba(56,189,248,.08) 0%, transparent 60%),
+        linear-gradient(160deg, #0a0f1a 0%, #0f1c33 100%);
+    }
+    .hero-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: .72rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--accent); margin-bottom: .8rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .hero-tag::before { content: ''; width: 28px; height: 2px; background: var(--accent); }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 4rem);
+      font-weight: 700; line-height: 1.1;
+      max-width: 700px; margin-bottom: 1rem;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      max-width: 560px; color: var(--muted);
+      font-size: 1.05rem; margin-bottom: 2rem;
+    }
+    .hero-stats {
+      display: flex; gap: 2.5rem; flex-wrap: wrap;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat .num {
+      font-family: 'Space Mono', monospace;
+      font-size: 2rem; font-weight: 700;
+      color: var(--accent); line-height: 1;
+    }
+    .hero-stat .label {
+      font-size: .78rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-top: .2rem;
+    }
+
+    /* ── SECTION ── */
+    section { position: relative; z-index: 1; padding: 5rem 2.5rem; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: .68rem; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--accent);
+      display: flex; align-items: center; gap: .5rem;
+      margin-bottom: .6rem;
+    }
+    .section-label::before { content: ''; width: 20px; height: 1px; background: var(--accent); }
+    section h2 { font-size: 1.9rem; font-weight: 700; margin-bottom: .5rem; }
+    section h2 span { color: var(--accent); }
+    section > .container > p,
+    section p.lead {
+      color: var(--muted); font-size: .98rem;
+      max-width: 680px; margin-bottom: 2rem;
+    }
+
+    .divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* ── CARDS ── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1px; margin-top: 2rem; }
+    .card-wrap { background: var(--border); }
+    .card {
+      background: var(--surface);
+      padding: 1.8rem;
+      height: 100%;
+      transition: background .2s;
+    }
+    .card:hover { background: var(--surface2); }
+    .card-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; margin-bottom: 1rem;
+      background: rgba(249,115,22,.12);
+      border: 1px solid rgba(249,115,22,.2);
+    }
+    .card h4 { font-size: 1rem; font-weight: 700; margin-bottom: .4rem; }
+    .card p { font-size: .88rem; color: var(--muted); }
+
+    /* ── ARCHITECTURE ── */
+    .arch-diagram {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .arch-branch {
+      background: var(--surface);
+      padding: 2rem 1.5rem;
+    }
+    .arch-merge {
+      background: var(--surface2);
+      padding: 2rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 200px;
+    }
+    .arch-branch h4, .arch-merge h4 {
+      font-family: 'Space Mono', monospace;
+      font-size: .78rem; letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .arch-branch h4 { color: var(--blue); }
+    .arch-merge h4 { color: var(--accent); text-align: center; }
+    .layer {
+      display: flex; align-items: center; gap: .7rem;
+      margin-bottom: .6rem;
+    }
+    .layer-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .layer-text { font-size: .83rem; color: var(--muted); }
+    .layer-text strong { color: var(--text); }
+    .arch-arrow {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent); font-size: 1.6rem;
+      padding: 0 .5rem;
+      background: var(--surface);
+    }
+
+    .feat-badge {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: .72rem; padding: .25rem .6rem;
+      border-radius: 4px; margin: .2rem;
+      font-weight: 700;
+    }
+    .feat-rgb { background: rgba(56,189,248,.15); color: var(--blue); border: 1px solid rgba(56,189,248,.3); }
+    .feat-ir  { background: rgba(249,115,22,.15); color: var(--accent); border: 1px solid rgba(249,115,22,.3); }
+    .feat-total { background: rgba(163,230,53,.15); color: var(--neutral); border: 1px solid rgba(163,230,53,.3); }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; margin-top: 1.5rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th {
+      background: var(--surface2); color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      font-size: .72rem; letter-spacing: 1px;
+      text-transform: uppercase; text-align: left;
+      padding: .9rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: .8rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.025); }
+    td.mono { font-family: 'Space Mono', monospace; font-size: .82rem; }
+    td .val { font-weight: 700; color: var(--accent); }
+
+    /* ── RESULTS ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 2rem;
+    }
+    .result-cell {
+      background: var(--surface);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      transition: background .2s;
+    }
+    .result-cell:hover { background: var(--surface2); }
+    .result-cell .fold-label {
+      font-family: 'Space Mono', monospace;
+      font-size: .68rem; letter-spacing: 2px; color: var(--muted);
+      text-transform: uppercase; margin-bottom: .6rem;
+    }
+    .result-cell .acc {
+      font-family: 'Space Mono', monospace;
+      font-size: 2rem; font-weight: 700;
+      color: var(--accent); line-height: 1;
+    }
+    .result-cell .acc-label {
+      font-size: .75rem; color: var(--muted); margin-top: .3rem;
+    }
+    .result-cell.mean-cell { background: var(--surface2); }
+    .result-cell.mean-cell .acc { color: var(--neutral); font-size: 2.4rem; }
+
+    /* ── TRAINING FLOW ── */
+    .training-steps {
+      display: flex; flex-direction: column; gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+      margin-top: 1.5rem;
+      counter-reset: step;
+    }
+    .training-step {
+      background: var(--surface);
+      padding: 1.5rem 2rem;
+      display: flex; align-items: flex-start; gap: 1.2rem;
+      transition: background .2s;
+      counter-increment: step;
+    }
+    .training-step:hover { background: var(--surface2); }
+    .step-num {
+      font-family: 'Space Mono', monospace;
+      font-size: .72rem; color: var(--accent);
+      border: 1px solid rgba(249,115,22,.3);
+      border-radius: 6px; padding: .3rem .5rem;
+      min-width: 36px; text-align: center;
+      margin-top: .15rem; flex-shrink: 0;
+    }
+    .step-body h5 { font-size: .95rem; font-weight: 700; margin-bottom: .3rem; }
+    .step-body p  { font-size: .85rem; color: var(--muted); }
+
+    /* ── CODE ── */
+    pre {
+      background: #060d1a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-family: 'Space Mono', monospace;
+      font-size: .78rem;
+      line-height: 1.8;
+      margin-top: 1.2rem;
+      color: #94a3b8;
+    }
+    pre .kw  { color: #f97316; }
+    pre .str { color: #a3e635; }
+    pre .num { color: #60a5fa; }
+    pre .cmt { color: #475569; font-style: italic; }
+    pre .fn  { color: #fb923c; }
+
+    /* ── LABEL BADGES ── */
+    .label-pill {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .82rem; font-weight: 600;
+      padding: .25rem .75rem; border-radius: 999px;
+      border: 1px solid;
+    }
+    .pill-cold    { color: var(--cold);    border-color: rgba(96,165,250,.3);  background: rgba(96,165,250,.1); }
+    .pill-neutral { color: var(--neutral); border-color: rgba(163,230,53,.3); background: rgba(163,230,53,.1); }
+    .pill-hot     { color: var(--hot);     border-color: rgba(248,113,113,.3); background: rgba(248,113,113,.1); }
+
+    /* ── DATASET BARS ── */
+    .dist-bar-row { display: flex; align-items: center; gap: .8rem; margin-bottom: .6rem; }
+    .dist-bar-row .dist-label { min-width: 70px; font-size: .85rem; }
+    .dist-bar-outer {
+      flex: 1; height: 22px; background: var(--surface2);
+      border-radius: 4px; overflow: hidden;
+    }
+    .dist-bar-inner { height: 100%; border-radius: 4px; transition: width .6s; }
+    .dist-bar-count { font-family: 'Space Mono', monospace; font-size: .75rem; color: var(--muted); min-width: 90px; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--surface); border-top: 1px solid var(--border);
+      text-align: center; padding: 2.5rem 1rem;
+      font-family: 'Space Mono', monospace; font-size: .72rem;
+      color: var(--muted); letter-spacing: .5px; position: relative; z-index: 1;
+    }
+
+    @media (max-width: 700px) {
+      nav .nav-links { display: none; }
+      .arch-diagram { grid-template-columns: 1fr; }
+      .arch-arrow { display: none; }
+      .arch-merge { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════ NAV ══════════════════════════ -->
+<nav>
+  <span class="nav-logo">P3 · THERMAL STRESS</span>
+  <div class="nav-links">
+    <a href="#overview">Overview</a>
+    <a href="#dataset">Dataset</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#training">Training</a>
+    <a href="#results">Results</a>
+  </div>
+</nav>
+
+<!-- ══════════════════════════ HERO ══════════════════════════ -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <h1>Pig Thermal<br><span>Stress Classification</span></h1>
+  <p>This work presents a multimodal deep learning approach that integrates RGB and infrared thermal imagery to classify pig thermal stress (cold, neutral, hot). The model is evaluated using 5-fold cross-validation to assess generalisation across recording periods.</p>  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="num">95.45%</div>
+      <div class="label">Mean CV Accuracy</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">4,993</div>
+      <div class="label">Total Samples</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">3</div>
+      <div class="label">Stress Classes</div>
+    </div>
+    <div class="hero-stat">
+      <div class="num">5-Fold</div>
+      <div class="label">Cross Validation</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ OVERVIEW ══════════════════════════ -->
+<section id="overview">
+  <div class="container">
+    <div class="section-label">Overview</div>
+    <h2>Why <span>Thermal Stress</span> Detection Matters</h2>
+    <p class="lead">
+        Thermal comfort directly impacts pig health, growth rate, and welfare. Existing monitoring systems rely on manual inspection or single-modality sensing, which limits scalability and consistency under varying lighting and environmental conditions. This work investigates whether combining visual (RGB) and thermal (IR) information improves classification of pig thermal stress states.
+    </p>
+
+    <div class="cards">
+      <div class="card-wrap"><div class="card">
+        <div class="card-icon">🌡️</div>
+        <h4>Welfare Monitoring</h4>
+        <p>Detects thermal distress early, enabling timely environmental adjustments to ventilation and heating systems before health deteriorates.</p>
+      </div></div>
+      <div class="card-wrap"><div class="card">
+        <div class="card-icon">📷</div>
+        <h4>Dual Modality</h4>
+        <p>Fuses standard RGB video with infrared thermal imagery; RGB captures posture and appearance while IR reveals thermal signatures invisible to the eye.</p>
+      </div></div>
+      <div class="card-wrap"><div class="card">
+        <div class="card-icon">⚙️</div>
+        <h4>Cross-Validation Strategy</h4>
+        <p>Performance is evaluated using 5-fold cross-validation, where each fold contains data from multiple recording weeks to assess generalisation.</p>
+      </div></div>
+      <div class="card-wrap"><div class="card">
+        <div class="card-icon">🔬</div>
+        <h4>Training Protocol</h4>
+        <p>The training setup includes balanced class sampling, spatial augmentation, gradient clipping, and learning rate scheduling to improve stability and reproducibility.</p>      </div></div>
+    </div>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- ══════════════════════════ DATASET ══════════════════════════ -->
+<section id="dataset">
+  <div class="container">
+    <div class="section-label">Dataset</div>
+    <h2>Data <span>Structure</span></h2>
+    <p class="lead">RGB + IR images across 5 folds, each covering 6 weeks of barn recordings. Labels are mapped from raw ternary values to class indices.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; flex-wrap: wrap;">
+      <!-- Label distribution -->
+      <div>
+        <p style="font-family:'Space Mono',monospace; font-size:.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:1rem;">Label Distribution</p>
+        <div class="dist-bar-row">
+          <div class="dist-label"><span class="label-pill pill-cold">❄️ cold</span></div>
+          <div class="dist-bar-outer"><div class="dist-bar-inner" style="width:34%; background:var(--cold);"></div></div>
+          <div class="dist-bar-count">1,699 &nbsp;(34.0%)</div>
+        </div>
+        <div class="dist-bar-row">
+          <div class="dist-label"><span class="label-pill pill-neutral">◎ neutral</span></div>
+          <div class="dist-bar-outer"><div class="dist-bar-inner" style="width:30.3%; background:var(--neutral);"></div></div>
+          <div class="dist-bar-count">1,514 &nbsp;(30.3%)</div>
+        </div>
+        <div class="dist-bar-row">
+          <div class="dist-label"><span class="label-pill pill-hot">🔥 hot</span></div>
+          <div class="dist-bar-outer"><div class="dist-bar-inner" style="width:35.6%; background:var(--hot);"></div></div>
+          <div class="dist-bar-count">1,780 &nbsp;(35.6%)</div>
+        </div>
+        <p style="font-size:.8rem; color:var(--muted); margin-top:.8rem;">Labels remapped: −1→0 (cold), 0→1 (neutral), 1→2 (hot)</p>
+      </div>
+
+      <!-- Fold distribution -->
+      <div>
+        <p style="font-family:'Space Mono',monospace; font-size:.72rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:1rem;">Fold Distribution</p>
+        <div class="table-wrap" style="margin-top:0;">
+          <table>
+            <thead><tr><th>Fold</th><th>Weeks</th><th>Samples</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">1</td><td class="mono">1 – 6</td><td class="mono"><span class="val">999</span></td></tr>
+              <tr><td class="mono">2</td><td class="mono">1 – 6</td><td class="mono"><span class="val">999</span></td></tr>
+              <tr><td class="mono">3</td><td class="mono">1 – 6</td><td class="mono"><span class="val">999</span></td></tr>
+              <tr><td class="mono">4</td><td class="mono">1 – 6</td><td class="mono"><span class="val">998</span></td></tr>
+              <tr><td class="mono">5</td><td class="mono">1 – 6</td><td class="mono"><span class="val">998</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:2.5rem; font-size:1.05rem; font-weight:700; margin-bottom:1rem;">Transforms &amp; Augmentation</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+      <div class="table-wrap" style="margin-top:0;">
+        <table>
+          <thead><tr><th colspan="2">RGB (Train)</th></tr></thead>
+          <tbody>
+            <tr><td>Resize</td><td class="mono">224 × 224</td></tr>
+            <tr><td>ColorJitter</td><td class="mono">br=0.2, cr=0.2, sat=0.2, hue=0.1</td></tr>
+            <tr><td>Normalize</td><td class="mono">ImageNet mean/std</td></tr>
+            <tr><td>RandomHFlip</td><td class="mono">p=0.5</td></tr>
+            <tr><td>RandomRotation</td><td class="mono">±15°</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap" style="margin-top:0;">
+        <table>
+          <thead><tr><th colspan="2">IR Thermal (Train)</th></tr></thead>
+          <tbody>
+            <tr><td>Resize</td><td class="mono">224 × 224</td></tr>
+            <tr><td>Normalize</td><td class="mono">mean=0.5, std=0.5</td></tr>
+            <tr><td>RandomHFlip</td><td class="mono">p=0.5</td></tr>
+            <tr><td>RandomRotation</td><td class="mono">±15°</td></tr>
+            <tr><td>ColorJitter</td><td class="mono">None (thermal only)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p style="font-size:.82rem; color:var(--muted); margin-top:.7rem;">Spatial augmentations (flip, rotation) are applied identically to both RGB and IR using a shared random seed, preserving alignment.</p>
+  </div>
+</section>
+<hr class="divider">
+
+
+<!-- ══════════════════════════ TRAINING ══════════════════════════ -->
+<section id="training">
+  <div class="container">
+    <div class="section-label">Training</div>
+    <h2>Training <span>Pipeline</span></h2>
+    <p class="lead">
+    The model is trained using 5-fold cross-validation. Each fold is trained independently with early stopping, learning rate scheduling, and gradient clipping based on validation performance.
+    </p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:2rem; flex-wrap:wrap;">
+      <div class="table-wrap" style="margin-top:0;">
+        <table>
+          <thead><tr><th colspan="2">Hyperparameters</th></tr></thead>
+          <tbody>
+            <tr><td>Learning Rate</td><td class="mono"><span class="val">1e-4</span></td></tr>
+            <tr><td>Batch Size</td><td class="mono"><span class="val">32</span></td></tr>
+            <tr><td>Max Epochs</td><td class="mono"><span class="val">15</span></td></tr>
+            <tr><td>Weight Decay</td><td class="mono"><span class="val">5e-4</span></td></tr>
+            <tr><td>Early Stopping Patience</td><td class="mono"><span class="val">5</span></td></tr>
+            <tr><td>Optimizer</td><td class="mono">AdamW</td></tr>
+            <tr><td>Loss</td><td class="mono">CrossEntropyLoss</td></tr>
+            <tr><td>LR Scheduler</td><td class="mono">ReduceLROnPlateau<br><small style="color:var(--muted);">patience=2, factor=0.5</small></td></tr>
+            <tr><td>Grad Clip</td><td class="mono">max_norm=1.0</td></tr>
+            <tr><td>Random Seed</td><td class="mono">42</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="training-steps">
+          <div class="training-step">
+            <div class="step-num">01</div>
+            <div class="step-body">
+              <h5>Split by Fold</h5>
+              <p>Train on 4 folds (~3,994 samples), validate on the held-out fold (~999 samples). No data leakage between splits.</p>
+            </div>
+          </div>
+          <div class="training-step">
+            <div class="step-num">02</div>
+            <div class="step-body">
+              <h5>Augmented DataLoader</h5>
+              <p>Training set applies spatial + colour augmentation. Validation uses clean resize-only transforms.</p>
+            </div>
+          </div>
+          <div class="training-step">
+            <div class="step-num">03</div>
+            <div class="step-body">
+              <h5>Train + Validate Loop</h5>
+              <p>Each epoch: forward pass → loss → backprop → grad clip → optimizer step. Validation loss drives scheduler and early stopping.</p>
+            </div>
+          </div>
+          <div class="training-step">
+            <div class="step-num">04</div>
+            <div class="step-body">
+              <h5>Save Best Checkpoint</h5>
+              <p>Best model per fold saved to <code style="font-size:.8rem; color:var(--accent);">pig_stress_model_fold{N}.pth</code> based on lowest validation loss.</p>
+            </div>
+          </div>
+          <div class="training-step">
+            <div class="step-num">05</div>
+            <div class="step-body">
+              <h5>Early Stopping</h5>
+              <p>Training halts if val loss doesn't improve for 5 consecutive epochs, preventing overfitting on a plateau.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </section>
+<hr class="divider">
+
+<!-- ══════════════════════════ RESULTS ══════════════════════════ -->
+<section id="results">
+  <div class="container">
+    <div class="section-label">Results</div>
+    <h2>5-Fold CV <span>Results</span></h2>
+    <p class="lead">
+    The model was trained for up to 15 epochs per fold. Performance is consistent across folds, with a mean best validation accuracy of 95.45%.
+    </p>
+    <div class="results-grid">
+      <div class="result-cell">
+        <div class="fold-label">Fold 1</div>
+        <div class="acc">96.40%</div>
+        <div class="acc-label">Best Val Acc</div>
+        <div style="margin-top:.6rem; font-size:.75rem; color:var(--muted);">Final: 92.89%</div>
+      </div>
+      <div class="result-cell">
+        <div class="fold-label">Fold 2</div>
+        <div class="acc">94.79%</div>
+        <div class="acc-label">Best Val Acc</div>
+        <div style="margin-top:.6rem; font-size:.75rem; color:var(--muted);">Final: 94.79%</div>
+      </div>
+      <div class="result-cell">
+        <div class="fold-label">Fold 3</div>
+        <div class="acc">94.59%</div>
+        <div class="acc-label">Best Val Acc</div>
+        <div style="margin-top:.6rem; font-size:.75rem; color:var(--muted);">Final: 94.59%</div>
+      </div>
+      <div class="result-cell">
+        <div class="fold-label">Fold 4</div>
+        <div class="acc">95.59%</div>
+        <div class="acc-label">Best Val Acc</div>
+        <div style="margin-top:.6rem; font-size:.75rem; color:var(--muted);">Final: 95.59%</div>
+      </div>
+      <div class="result-cell">
+        <div class="fold-label">Fold 5</div>
+        <div class="acc">95.89%</div>
+        <div class="acc-label">Best Val Acc</div>
+        <div style="margin-top:.6rem; font-size:.75rem; color:var(--muted);">Final: 95.89%</div>
+      </div>
+      <div class="result-cell mean-cell">
+        <div class="fold-label">Mean (Best)</div>
+        <div class="acc">95.45%</div>
+        <div class="acc-label">Across All Folds</div>
+        <div style="margin-top:.6rem; font-size:.75rem; color:var(--muted);">Avg epochs: 15.0</div>
+      </div>
+    </div>
+
+    <!-- Epoch-by-epoch highlight -->
+    <h3 style="margin-top:2.5rem; font-size:1rem; font-weight:700; margin-bottom:.8rem;">Fold 1 — Epoch Progression</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Epoch</th><th>Train Loss</th><th>Train Acc</th><th>Val Loss</th><th>Val Acc</th><th>LR</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1</td><td class="mono">1.0146</td><td class="mono">48.67%</td><td class="mono">0.7124</td><td class="mono">70.97%</td><td class="mono">1e-4</td></tr>
+          <tr><td class="mono">3</td><td class="mono">0.5157</td><td class="mono">78.57%</td><td class="mono">0.3203</td><td class="mono">88.89%</td><td class="mono">1e-4</td></tr>
+          <tr><td class="mono">7</td><td class="mono">0.2022</td><td class="mono">92.34%</td><td class="mono">0.1414</td><td class="mono">94.69%</td><td class="mono">1e-4</td></tr>
+          <tr><td class="mono">11</td><td class="mono">0.1180</td><td class="mono">96.04%</td><td class="mono">0.1201</td><td class="mono">95.70%</td><td class="mono">5e-5</td></tr>
+          <tr><td class="mono">12 ✓</td><td class="mono">0.1068</td><td class="mono">96.19%</td><td class="mono"><span class="val">0.1058</span></td><td class="mono"><span class="val">95.80%</span></td><td class="mono">5e-5</td></tr>
+          <tr><td class="mono">15</td><td class="mono">0.0848</td><td class="mono">97.25%</td><td class="mono">0.1881</td><td class="mono">92.89%</td><td class="mono">2.5e-5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.8rem; color:var(--muted); margin-top:.5rem;">✓ = best checkpoint saved. Note LR decay at epoch 10 → sharper convergence, slight val loss uptick at end suggests mild overfitting in later epochs.</p>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════ FOOTER ══════════════════════════ -->
+<footer>
+  <p>P3 PRECISION PIG PRODUCTION — THERMAL STRESS CLASSIFICATION &nbsp;©&nbsp;2026</p>
+</footer>
+
+</body>
+</html>

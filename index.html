@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pig Behaviour Classification — P3 Project</title>
+  <style>
+    /* ── Reset & base ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+      background: #f8fafc;
+      line-height: 1.7;
+    }
+
+    /* ── Navbar ─────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15,23,42,.92);
+      backdrop-filter: blur(10px);
+      padding: .9rem 2rem;
+      display: flex; align-items: center; gap: 2rem;
+    }
+    nav .logo { font-weight: 700; font-size: 1.15rem; color: #38bdf8; letter-spacing: .5px; }
+    nav a { color: #cbd5e1; text-decoration: none; font-size: .92rem; transition: color .2s; }
+    nav a:hover { color: #38bdf8; }
+
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+      color: #f1f5f9;
+      padding: 5rem 2rem 4rem;
+      text-align: center;
+    }
+    .hero h1 { font-size: 2.6rem; font-weight: 800; margin-bottom: .6rem; }
+    .hero p  { max-width: 680px; margin: 0 auto; font-size: 1.15rem; color: #94a3b8; }
+
+    /* ── Container / Section ───────────────────────────────── */
+    .container { max-width: 980px; margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 3.5rem 0; }
+    section h2 {
+      font-size: 1.7rem; font-weight: 700; margin-bottom: 1rem;
+      border-left: 4px solid #38bdf8; padding-left: .75rem;
+    }
+    section h3 { font-size: 1.15rem; font-weight: 600; margin: 1.4rem 0 .5rem; }
+    section p, section li { font-size: 1rem; color: #334155; }
+    section ul { padding-left: 1.4rem; }
+    section li { margin-bottom: .35rem; }
+    .divider { border: none; border-top: 1px solid #e2e8f0; margin: 0; }
+
+    /* ── Cards grid ─────────────────────────────────────────── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; margin-top: 1.2rem; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      border: 1px solid #e2e8f0;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.1); }
+    .card .icon { font-size: 2rem; margin-bottom: .5rem; }
+    .card h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: .3rem; }
+    .card p  { font-size: .9rem; color: #475569; }
+
+    /* ── Flow diagram (pure CSS) ───────────────────────────── */
+    .flow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .5rem; margin-top: 1.4rem; }
+    .flow-step {
+      background: #0f172a; color: #e2e8f0; border-radius: 10px;
+      padding: .7rem 1.2rem; font-size: .88rem; font-weight: 600;
+      text-align: center; min-width: 140px;
+    }
+    .flow-arrow { font-size: 1.4rem; color: #38bdf8; }
+
+    /* ── Table ──────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: .92rem; }
+    th, td { padding: .6rem .9rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f1f5f9; font-weight: 600; }
+    tr:hover td { background: #f8fafc; }
+
+    /* ── Code block ─────────────────────────────────────────── */
+    pre {
+      background: #0f172a; color: #e2e8f0; border-radius: 10px;
+      padding: 1.2rem 1.5rem; overflow-x: auto; font-size: .85rem;
+      line-height: 1.6; margin-top: 1rem;
+    }
+    code { font-family: 'Fira Code', 'Cascadia Code', monospace; }
+
+    /* ── Chart placeholder (inline SVG) ────────────────────── */
+    .chart-wrap {
+      background: #fff; border-radius: 12px; padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid #e2e8f0;
+      margin-top: 1.2rem; overflow-x: auto;
+    }
+    .chart-wrap h4 { text-align: center; margin-bottom: .8rem; font-size: 1rem; }
+
+    /* ── Confusion-matrix grid ─────────────────────────────── */
+    .cm-grid { display: inline-grid; gap: 2px; font-size: .78rem; font-weight: 600; }
+    .cm-cell {
+      width: 62px; height: 42px; display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; color: #fff;
+    }
+    .cm-header { background: transparent; color: #334155; font-weight: 700; font-size: .75rem; }
+    .cm-row-label { writing-mode: horizontal-tb; }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer { background: #0f172a; color: #94a3b8; text-align: center; padding: 2rem 1rem; font-size: .85rem; }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.8rem; }
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════ NAVBAR ════════════════ -->
+<nav>
+  <span class="logo">P3 · Pig Behaviour</span>
+  <a href="#motivation">Motivation</a>
+  <a href="#model">Model</a>
+  <a href="#scenarios">Scenarios</a>
+  <a href="#flow">Code Flow</a>
+  <a href="#results">Results</a>
+</nav>
+
+<!-- ════════════════ HERO ════════════════ -->
+<div class="hero">
+  <h1>Pig Behaviour Classification</h1>
+  <p>An automated pipeline that uses deep learning and heuristic rules to detect and classify pig behaviours from overhead barn video as part of the P3 Precision Pig Farming project.</p>
+</div>
+
+<!-- ════════════════ MOTIVATION ════════════════ -->
+<section id="motivation">
+  <div class="container">
+    <h2>Why This Model Is Needed</h2>
+
+    <p>
+      The P3 (Precision Pig Production) project aims to improve pig welfare and farm efficiency using continuous, non-invasive monitoring of behaviour. 
+      Manual video scoring is slow, costly, and often inconsistent.
+    </p>
+
+    <h3>Key Motivations</h3>
+
+    <ul>
+      <li><strong>Early health detection:</strong> Changes in movement, posture, or feeding can indicate illness or stress before visible symptoms appear.</li>
+      <li><strong>Welfare compliance:</strong> Automated records provide consistent and auditable evidence for monitoring and reporting.</li>
+      <li><strong>Scalable monitoring:</strong> A single camera can track all pigs continuously without observer fatigue.</li>
+      <li><strong>Data-driven management:</strong> Behaviour data helps optimize feeding, pen layouts, and environmental controls.</li>
+      <li><strong>Research value:</strong> High-resolution data supports studies in precision livestock farming and animal behaviour.</li>
+      <li><strong>Cost efficiency:</strong> Automating video analysis reduces labour and resource needs.</li>
+    </ul>
+
+    <p style="margin-top:.8rem;">
+      The system combines a ResNet-18 classifier with motion- and zone-based heuristics for fast, reliable behaviour classification from overhead video, enabling practical on-farm deployment.
+    </p>
+
+  </div>
+</section>
+<hr class="divider">
+
+<!-- ════════════════ MODEL OVERVIEW ════════════════ -->
+<section id="model">
+  <div class="container">
+    <h2>Model Overview</h2>
+    <p>The pipeline has two complementary components that work together to classify pig behaviour frame-by-frame:</p>
+
+    <h3>1. ResNet-18 for Lying vs Standing Classifier</h3>
+    <p>
+    A pre-trained ResNet-18 (ImageNet weights) is fine-tuned on cropped pig images from annotated video sequences. 
+    The final fully-connected layer is replaced with a 2-class output (lying / standing). 
+    Training uses 5-fold cross-validation on a balanced dataset of 1,500 images per class, augmented with flips, rotations, colour jitter, and random crops. 
+    </p>
+
+    <h3>2. Heuristic Rule Engine</h3>
+    <p>
+      Before the CNN is even consulted, a set of spatial and motion rules classifies the more distinctive behaviours:
+    </p>
+    <table>
+      <thead><tr><th>Rule</th><th>Condition</th><th>Assigned Behaviour</th></tr></thead>
+      <tbody>
+        <tr><td>Feeder zone overlap &gt; 10 % &amp; velocity &lt; 10 px</td><td>Pig's bounding box overlaps the feeder region</td><td><strong>Eat</strong></td></tr>
+        <tr><td>Drinker zone overlap &gt; 10 % &amp; velocity &lt; 7 px</td><td>Pig's bounding box overlaps a drinker region</td><td><strong>Drink</strong></td></tr>
+        <tr><td>Velocity &lt; 2 px</td><td>Nearly no movement</td><td><strong>Lying</strong></td></tr>
+        <tr><td>Velocity 2 – 5 px</td><td>Slight movement</td><td><strong>Standing</strong></td></tr>
+        <tr><td>Velocity 15 – 20 px</td><td>Moderate movement</td><td><strong>Walk</strong></td></tr>
+        <tr><td>Velocity &gt; 20 px</td><td>Fast movement</td><td><strong>Run</strong></td></tr>
+        <tr><td>Otherwise</td><td>Ambiguous velocity (5 – 15 px)</td><td>CNN predicts <strong>Lying / Standing</strong></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top: .8rem;">
+      The CNN acts as a fallback for frames where motion alone is ambiguous, ensuring robust classification even when pigs are shifting weight or slowly repositioning.
+    </p>
+
+    <h3>Zone Detection via Background Mask</h3>
+    <p>
+      A manually created background mask (GIMP) highlights the feeder and two drinker areas.
+      OpenCV contour detection identifies the three largest blobs and extracts their bounding boxes,
+      which are then used at inference time to test bounding-box overlap with each zone.
+    </p>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- ════════════════ SCENARIOS ════════════════ -->
+<section id="scenarios">
+  <div class="container">
+    <h2>Behaviour Scenarios</h2>
+    <p>The model classifies each detected pig into one of six behaviours. After evaluation, <em>walk</em>, <em>run</em> are merged into <strong>moving</strong> and <em>sleep</em> is merged into <strong>lying</strong> for 5-class reporting.</p>
+
+    <div class="cards">
+      <div class="card">
+        <h4>Lying / Sleep</h4>
+        <p>Pig is stationary with very low velocity (&lt; 2 px between frames). The CNN also distinguishes lying posture from standing when velocity is ambiguous.</p>
+      </div>
+      <div class="card">
+        <h4>Standing</h4>
+        <p>Pig is upright with slight movement (velocity 2 – 5 px). In ambiguous cases the ResNet crop classifier makes the final call.</p>
+      </div>
+      <div class="card">
+        <h4>Eating</h4>
+        <p>Pig's bounding box overlaps the <em>Feeder Zone</em> by &gt; 10 % while velocity is low (&lt; 10 px) — indicating stationary feeding behaviour.</p>
+      </div>
+      <div class="card">
+        <h4>Drinking</h4>
+        <p>Bounding box overlaps either drinker zone (left or right) by &gt; 10 % with velocity &lt; 7 px — the pig is at the nipple drinker.</p>
+      </div>
+      <div class="card">
+        <h4>Walking</h4>
+        <p>Moderate frame-to-frame displacement (velocity 15 – 20 px). Merged into the <strong>moving</strong> class for final 5-class evaluation.</p>
+      </div>
+      <div class="card">
+        <h4>Running</h4>
+        <p>High displacement (&gt; 20 px). Also merged into <strong>moving</strong>. Typically occurs during play or startle events.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- ════════════════ CODE FLOW ════════════════ -->
+<section id="flow">
+  <div class="container">
+    <h2>Code Flow</h2>
+
+    <div class="flow">
+      <!-- <div class="flow-step">1&nbsp;&nbsp;Import Libraries<br><small>torch, cv2, sklearn …</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">2&nbsp;&nbsp;Download &amp; Extract<br><small>Annotated dataset</small></div>
+      <span class="flow-arrow">→</span> -->
+      <div class="flow-step">&nbsp;&nbsp;Zone Detection<br><small>Feeder / Drinker mask</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">&nbsp;&nbsp;Crop Pigs<br><small>Lying &amp; Standing images</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">&nbsp;&nbsp;Balance &amp; Augment<br><small>1 500 per class</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">&nbsp;&nbsp;Train ResNet-18<br><small>5-fold CV</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">&nbsp;&nbsp;Validate<br><small>Heuristics + CNN</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-step">&nbsp;&nbsp;Evaluate<br><small>Confusion matrix</small></div>
+    </div>
+
+    <h3>Step-by-step detail</h3>
+    <ol style="padding-left:1.4rem; margin-top:.6rem;">
+      <!-- <li><strong>Library imports &amp; GPU check</strong> — loads PyTorch, OpenCV, scikit-learn and verifies CUDA availability.</li> -->
+      <!-- <li><strong>Data download</strong> — pulls annotated video sequences from Google Drive and extracts them.</li> -->
+      <li><strong>Zone detection</strong> — reads a hand-made background mask, finds the three largest contours (feeder, left drinker, right drinker) via OpenCV, and stores their bounding-box coordinates.</li>
+      <li><strong>Crop extraction</strong> — iterates over training sequences, reads <code>output.json</code> annotations, decodes corresponding video frames, and saves cropped pig images into <code>lying/</code> and <code>standing/</code> folders.</li>
+      <li><strong>Data balancing</strong> — augments the minority class with random flips, rotations, colour jitter and crops until both classes reach 1500 samples.</li>
+      <li><strong>ResNet-18 training</strong> — 5-fold cross-validation on the balanced dataset; saves the best-fold checkpoint (<code>.pt</code> file).</li>
+      <li><strong>Validation inference</strong> — for each validation sequence:
+        <ul>
+          <li>Interpolates bounding boxes between annotated keyframes.</li>
+          <li>Computes per-frame velocity.</li>
+          <li>Applies the heuristic decision tree (eat → drink → lying/standing/walk/run).</li>
+          <li>Falls back to the CNN for ambiguous velocity frames.</li>
+        </ul>
+      </li>
+      <li><strong>Evaluation</strong> — computes overall accuracy and generates both a full and a 5-class confusion matrix.</li>
+    </ol>
+
+    <h3>Key code snippet — heuristic decision tree</h3>
+    <pre><code># Per-frame behaviour decision (simplified)
+if overlap_feeder > 0.1 and velocity < 10:
+    behaviour = "eat"
+elif overlap_drinker > 0.1 and velocity < 7:
+    behaviour = "drink"
+elif velocity < 2:
+    behaviour = "lying"
+elif 2 <= velocity <= 5:
+    behaviour = "standing"
+elif velocity > 20:
+    behaviour = "run"
+elif 15 < velocity <= 20:
+    behaviour = "walk"
+else:
+    # Ambiguous — ask the CNN
+    behaviour = resnet18_predict(crop)  # "lying" or "standing"</code></pre>
+  </div>
+</section>
+<hr class="divider">
+
+<!-- ════════════════ RESULTS / GRAPHS ════════════════ -->
+<section id="results">
+  <div class="container">
+    <h2>Results &amp; Graphs</h2>
+
+    <!-- ── Confusion matrix from notebook output ────────── -->
+    <div class="chart-wrap">
+      <h4>Confusion Matrix</h4>
+      <div style="text-align:center;">
+        <img src="output.png" alt="Confusion Matrix" style="max-width:100%; border-radius:8px;" />
+      </div>
+    </div>
+
+    <h3 style="margin-top:1.5rem;">Training Details</h3>
+    <table>
+      <tr><th>Hyperparameter</th><th>Value</th></tr>
+      <tr><td>Architecture</td><td>ResNet-18 (ImageNet pre-trained)</td></tr>
+      <tr><td>Input size</td><td>224 × 224</td></tr>
+      <tr><td>Optimiser</td><td>Adam, lr = 1 × 10⁻⁴</td></tr>
+      <tr><td>Loss</td><td>Cross-Entropy</td></tr>
+      <tr><td>Folds</td><td>5 (KFold, shuffle, seed 42)</td></tr>
+      <tr><td>Epochs per fold</td><td>10</td></tr>
+      <tr><td>Batch size</td><td>32</td></tr>
+      <tr><td>Augmentation</td><td>Flip, rotation ±15°, colour jitter, random crop</td></tr>
+      <tr><td>Balanced classes</td><td>1 500 lying + 1 500 standing</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ════════════════ FOOTER ════════════════ -->
+<footer>
+  <p>P3 Precision Pig Production — Pig Behaviour Classification &copy; 2026</p>
+</footer>
+
+</body>
+</html>
