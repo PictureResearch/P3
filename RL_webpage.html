@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Swine Thermal Control Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #f7f3ee;
+    --surface: #ffffff;
+    --surface2: #f2ebe5;
+    --border: #d7cbc0;
+    --accent: #8b1e2d;
+    --accent2: #b13a4f;
+    --accent3: #5f6b7a;
+    --text: #221b19;
+    --muted: #625853;
+    --warm: #9b4a22;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Sans 3', sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 60% 50% at 20% 50%, rgba(139,30,45,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(177,58,79,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: min(100%, 1200px);
+    margin: 0 auto;
+    padding: 80px 80px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139,30,45,0.08);
+    border: 1px solid rgba(139,30,45,0.24);
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    width: fit-content;
+    margin-bottom: 32px;
+  }
+
+  .tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: clamp(3.2rem, 5vw, 5.8rem);
+    line-height: 1.0;
+    margin-bottom: 24px;
+    letter-spacing: -0.02em;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 20px;
+    color: var(--muted);
+    max-width: none;
+    width: 100%;
+    margin-bottom: 48px;
+    line-height: 1.9;
+    text-align: justify;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-val {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 2.7rem;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-val span { color: var(--accent); }
+
+  .stat-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .hero-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 80px 80px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .barn-diagram {
+    width: 100%;
+    max-width: 1200px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 32px;
+    position: relative;
+  }
+
+  .barn-diagram::before {
+    content: 'SYSTEM ARCHITECTURE';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: var(--bg);
+    padding: 0 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+  }
+
+  .arch-line {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .arch-box {
+    flex: 1 1 180px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 18px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    min-width: 180px;
+  }
+
+  .arch-box.highlight { border-color: var(--accent); color: var(--accent); }
+  .arch-box.highlight2 { border-color: var(--accent2); color: var(--accent2); }
+  .arch-box.highlight3 { border-color: var(--accent3); color: var(--accent3); }
+  .arch-box.highlight4 { border-color: var(--warm); color: var(--warm); }
+
+  .arch-arrow {
+    color: var(--muted);
+    font-size: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .arch-label {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* DIVIDER */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 0 80px;
+  }
+
+  /* SECTIONS */
+  section {
+    padding: 60px 80px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  h2 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: clamp(2.2rem, 3vw, 3.4rem);
+    margin-bottom: 16px;
+    line-height: 1.1;
+  }
+
+  .section-subtitle {
+    color: var(--muted);
+    font-size: 19px;
+    max-width: none;
+    width: 100%;
+    margin-bottom: 36px;
+    line-height: 1.9;
+    text-align: left;
+  }
+
+  /* MOTIVATION CARDS */
+  .motivation-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 0;
+  }
+
+  .mot-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .mot-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+
+  .mot-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .mot-card:hover::after { opacity: 1; }
+
+  .mot-icon {
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+
+  .mot-card h3 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+
+  .mot-card p {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.8;
+    text-align: left;
+  }
+
+  /* MODEL OVERVIEW */
+  .model-overview {
+    display: block;
+  }
+
+  .obs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 16px;
+  }
+
+  .obs-table th {
+    text-align: left;
+    padding: 10px 16px;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .obs-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    vertical-align: top;
+  }
+
+  .obs-table tr:last-child td { border-bottom: none; }
+
+  .obs-table .note { color: var(--muted); font-size: 15px; line-height: 1.7; text-align: justify; }
+
+  .thresholds {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .thresh-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .thresh-icon { font-size: 24px; flex-shrink: 0; }
+
+  .thresh-info { flex: 1; }
+  .thresh-info h4 { font-size: 14px; margin-bottom: 4px; }
+  .thresh-info p { color: var(--muted); font-size: 15px; line-height: 1.7; text-align: left; }
+
+  .thresh-range {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .range-piglet { background: rgba(155,74,34,0.12); color: var(--warm); border: 1px solid rgba(155,74,34,0.24); }
+  .range-young { background: rgba(177,58,79,0.12); color: var(--accent2); border: 1px solid rgba(177,58,79,0.24); }
+  .range-adult { background: rgba(139,30,45,0.12); color: var(--accent); border: 1px solid rgba(139,30,45,0.24); }
+
+  /* SCENARIOS */
+  .scenarios-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .scenario-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .scenario-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .scenario-header h3 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.1rem;
+  }
+
+  .scenario-header p {
+    color: var(--muted);
+    font-size: 15px;
+    margin-top: 4px;
+    line-height: 1.7;
+    text-align: left;
+  }
+
+  .scenario-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-success { background: rgba(63,185,80,0.15); color: var(--accent); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-warn { background: rgba(227,179,65,0.15); color: var(--warm); border: 1px solid rgba(227,179,65,0.3); }
+  .badge-info { background: rgba(121,192,255,0.15); color: var(--accent3); border: 1px solid rgba(121,192,255,0.3); }
+
+  .scenario-chart {
+    padding: 20px 24px;
+    height: 200px;
+    position: relative;
+  }
+
+  .scenario-placeholder {
+    margin: 20px 24px;
+    min-height: 180px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--muted);
+    background: linear-gradient(180deg, rgba(139,30,45,0.03), rgba(139,30,45,0.01));
+    font-size: 17px;
+    line-height: 1.8;
+    padding: 24px;
+  }
+
+  .scenario-footer {
+    padding: 12px 24px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 24px;
+  }
+
+  .sf-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sf-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .sf-val {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  /* PIPELINE */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .pipe-stage {
+    flex: 1;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .pipe-stage:last-child { border-bottom: none; }
+
+  .pipe-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .pipe-stage h3 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.12rem;
+    margin-bottom: 10px;
+  }
+
+  .pipe-stage p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.8;
+    text-align: left;
+  }
+
+  .pipe-tag {
+    display: inline-block;
+    margin-top: 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(139,30,45,0.08);
+    border: 1px solid rgba(139,30,45,0.18);
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+  /* HERO ARCHITECTURE */
+  .hero-architecture {
+    width: min(100%, 1200px);
+    margin: 0 auto 80px auto;
+    padding: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .arch-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 22px;
+  }
+
+  .arch-flow {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1.1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .arch-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px;
+  }
+
+  .arch-card h3 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.05rem;
+    margin: 6px 0 8px;
+  }
+
+  .arch-card p {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .arch-main {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(139,30,45,0.12);
+  }
+
+  .arch-kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+
+  .arch-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 22px;
+  }
+
+  .feedback-line {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border);
+    color: var(--muted);
+    font-size: 15px;
+    text-align: center;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 1000px) {
+    .arch-flow {
+      grid-template-columns: 1fr;
+    }
+
+    .arch-arrow {
+      transform: rotate(90deg);
+      padding: 2px 0;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-left { padding: 64px 32px 24px 32px; }
+    .hero-right { padding: 0 32px 48px 32px; }
+    section { padding: 60px 32px; }
+    .motivation-grid { grid-template-columns: 1fr; }
+    .model-overview { grid-template-columns: 1fr; }
+    .scenarios-grid { grid-template-columns: 1fr; }
+    .pipeline { flex-direction: column; }
+    .pipe-stage { border-bottom: 1px solid var(--border); }
+    footer { flex-direction: column; gap: 12px; padding: 32px; }
+    .hero-architecture { margin: 0 auto 40px auto; padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="tag">P3 Project — Swine Thermal Control</div>
+    <h1>Swine <em>Thermal</em> Control Model</h1>
+    <p class="hero-desc">A reinforcement learning agent that learns thermal control in a pig barn and autonomously actuates heaters, fans, and sprinklers to keep herd temperature within comfort bands across changing conditions. Trained with PPO over 3.0 million steps on an 18-dimensional sensor observation space with curriculum learning across mixed-age herds, the policy adapts to thermal stress, sick events, and seasonal variation while minimizing energy use and equipment switching.</p>
+    
+    <div class="hero-architecture">
+      <div class="arch-title">Closed-loop RL control architecture</div>
+
+      <div class="arch-flow">
+        <div class="arch-card">
+          <div class="arch-kicker">Input</div>
+          <h3>Barn Sensors</h3>
+          <p>Temperature, humidity, CO₂, clock, equipment states, herd counts</p>
+        </div>
+
+        <div class="arch-arrow">→</div>
+
+        <div class="arch-card">
+          <div class="arch-kicker">State</div>
+          <h3>18-Dim Observation</h3>
+          <p>Sensor values plus availability flags for missing sensors</p>
+        </div>
+
+        <div class="arch-arrow">→</div>
+
+        <div class="arch-card arch-main">
+          <div class="arch-kicker">Agent</div>
+          <h3>PPO Policy</h3>
+          <p>Learns when to heat, cool, hold, or reduce switching</p>
+        </div>
+
+        <div class="arch-arrow">→</div>
+
+        <div class="arch-card">
+          <div class="arch-kicker">Action</div>
+          <h3>5 Binary Controls</h3>
+          <p>Heater 1, heater 2, fan 1, fan 2, sprinkler</p>
+        </div>
+
+        <div class="arch-arrow">→</div>
+
+        <div class="arch-card">
+          <div class="arch-kicker">Environment</div>
+          <h3>Pig Barn</h3>
+          <p>Air temp, perceived temp, stress, humidity, and CO₂ update</p>
+        </div>
+      </div>
+
+      <div class="feedback-line">Environment updates create the next sensor observation → closed loop learning</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- MOTIVATION -->
+<section>
+  <div class="section-label">// Why this matters</div>
+  <h2>Why This Controller Matters</h2>
+  <p class="section-subtitle">Thermal stress is one of the leading causes of reduced growth rates, illness, and mortality in commercial pig farming. Manual monitoring is reactive and inconsistent especially across barns with mixed-age herds. The agent learns to balance comfort, energy efficiency, and equipment durability across dynamic environmental conditions.</p>
+
+  <div class="motivation-grid">
+    <div class="mot-card">
+      <h3>Age-Dependent Comfort</h3>
+      <p>Piglets, young pigs & adults need different temperature ranges. The controller learns how to balance when the barn has a mixed-age herd.</p>
+    </div>
+    <div class="mot-card">
+      <h3>Autonomous Response</h3>
+      <p>The PPO policy learns when to heat, cool, or hold steady based on the current barn state instead of using fixed manual rules.</p>
+    </div>
+    <div class="mot-card">
+      <h3>Sensor-Ready Deployment</h3>
+      <p>The system works with practical barn inputs such as temperature, humidity, CO₂, herd counts, and simple on/off equipment controls.</p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- MODEL OVERVIEW -->
+<section>
+  <div class="section-label">// Model design</div>
+  <h2>What the Agent Observes</h2>
+  <p class="section-subtitle">The PPO agent receives an 18-dimensional observation vector every timestep and outputs 5 binary actions: heater1, heater2, fan1, fan2, and sprinkler. Sensor values are masked when unavailable, and the herd composition changes across evaluation scenarios to test robustness.</p>
+
+  <div class="model-overview">
+    <div>
+      <ul style="list-style: disc; margin-left: 24px; color: var(--muted); font-size: 16px; line-height: 1.8;">
+        <li style="margin-bottom: 12px;">Air temperature, perceived temperature, and the air-perceived delta.</li>
+        <li style="margin-bottom: 12px;">Heater 1 and heater 2 states.</li>
+        <li style="margin-bottom: 12px;">Fan 1 and fan 2 states.</li>
+        <li style="margin-bottom: 12px;">Sprinkler state.</li>
+        <li style="margin-bottom: 12px;">Piglet, young, and adult herd counts.</li>
+        <li style="margin-bottom: 12px;">Humidity value plus availability flag.</li>
+        <li style="margin-bottom: 12px;">CO2 value plus availability flag.</li>
+        <li style="margin-bottom: 12px;">Clock sine, clock cosine, plus availability flag.</li>
+      </ul>
+    </div>
+
+    <div class="thresholds">
+      <h3 style="font-family:'Libre Baskerville',serif; font-size:1.3rem; margin-bottom:20px; color:var(--text);">Comfort Zone Thresholds</h3>
+      <div class="thresh-item">
+        <div class="thresh-icon">🐷</div>
+        <div class="thresh-info">
+          <h3>Piglets</h3>
+        </div>
+        <div class="thresh-range range-piglet">28–34°C</div>
+      </div>
+      <div class="thresh-item">
+        <div class="thresh-icon">🐖</div>
+        <div class="thresh-info">
+          <h3>Young Pigs</h3>
+        </div>
+        <div class="thresh-range range-young">18–26°C</div>
+      </div>
+      <div class="thresh-item">
+        <div class="thresh-icon">🐗</div>
+        <div class="thresh-info">
+          <h3>Adults</h3>
+        </div>
+        <div class="thresh-range range-adult">15–22°C</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- SCENARIOS -->
+<section>
+  <div class="section-label">// Evaluation results</div>
+  <h2>Scenario Performance</h2>
+  <p class="section-subtitle">Below are two key evaluation scenarios showing the model's ability to maintain thermal comfort under stress. Each includes temperature traces, stress metrics, and recovery performance. These representative cases demonstrate generalization across age groups and environmental conditions.</p>
+
+  <div class="scenarios-grid">
+
+    <!-- Scenario 1 -->
+    <div>
+      <h3 style="font-family: 'Libre Baskerville', serif; font-size: 1.1rem; margin-bottom: 8px;">Piglets — Cold Spring Day</h3>
+      <p style="color: var(--muted); font-size: 15px; margin-bottom: 16px;">Avg outside 15°C · ±10°C swing · Sick event active</p>
+      <img src="piglets_cold_spring.png" alt="Piglets Cold Spring Scenario" style="width: 100%; height: 200px; border-radius: 4px; border: 1px solid var(--border);">
+    </div>
+
+    <!-- Scenario 2 -->
+    <div>
+      <h3 style="font-family: 'Libre Baskerville', serif; font-size: 1.1rem; margin-bottom: 8px;">Adults — Summer Heat</h3>
+      <p style="color: var(--muted); font-size: 15px; margin-bottom: 16px;">Representative summer thermal stress scenario</p>
+      <img src="adults_brutal_summer.png" alt="Adults Summer Scenario" style="width: 100%; height: 200px; border-radius: 4px; border: 1px solid var(--border);">
+    </div>
+
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- TRAINING PIPELINE -->
+<section>
+  <div class="section-label">// Development journey</div>
+  <h2>Training Pipeline</h2>
+  <p class="section-subtitle">This five-stage workflow reflects the current notebook implementation: environment design with curriculum learning, 2.0M-step base training on mixed-age herds, followed by 1.0M-step finetuning with stricter control penalties, and comprehensive scenario-based evaluation across thermal and disturbance conditions.</p>
+
+  <div class="pipeline">
+
+    <div class="pipe-stage">
+      <div class="pipe-num">01</div>
+      <h3>SwineRL v2 Setup</h3>
+      <p>The environment is defined with an 18-dimensional observation space and 5 binary control actions. Sensor masking allows the policy to handle missing inputs during deployment.</p>
+      <div class="pipe-tag">obs=18 · action=5</div>
+    </div>
+
+    <div class="pipe-stage">
+      <div class="pipe-num">02</div>
+      <h3>Environment + Reward Design</h3>
+      <p>The simulation models barn temperature, pig perception, and environmental factors. The reward balances thermal comfort, energy use, and equipment stability, with curriculum learning across herd complexity.</p>
+      <div class="pipe-tag">constraints</div>
+    </div>
+
+    <div class="pipe-stage">
+      <div class="pipe-num">03</div>
+      <h3>Base PPO Training</h3>
+      <p>The policy is trained over 2 million steps using 8 parallel environments with normalized observations. This stage teaches basic thermal control across varying conditions.</p>
+      <div class="pipe-tag">2,000,000 steps</div>
+    </div>
+
+    <div class="pipe-stage">
+      <div class="pipe-num">04</div>
+      <h3>Policy Finetuning</h3>
+      <p>An additional 1 million steps refine the policy with stronger penalties on inefficient actions like heater–fan conflicts and excessive switching, improving stability and realism.</p>
+      <div class="pipe-tag">+1,000,000 steps</div>
+    </div>
+
+    <div class="pipe-stage">
+      <div class="pipe-num">05</div>
+      <h3>Evaluation + Diagnostics</h3>
+      <p>The trained policy is evaluated across multiple scenarios, measuring comfort time, thermal stress, recovery behavior, and equipment usage under different environmental conditions.</p>
+      <div class="pipe-tag">8 scenario checks</div>
+    </div>
+
+  </div>
+</section>
+
