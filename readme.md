@@ -337,24 +337,6 @@ Before any real-world deployment, a barn-control system would require:
 
 ---
 
-## Citation
-
-A formal citation will be added when a related paper, preprint, or project report becomes available.
-
-For now, please cite this repository as:
-
-```text
-P3 Project Team. P3: Proactive Pig Production — Animal-centric AI for Indoor Environmental Control. GitHub repository, 2026.
-```
-
----
-
-## License
-
-No license file is currently included in this repository. Until a license is added, reuse, redistribution, and derivative work may be restricted. Please contact the project maintainers before reusing the code or materials outside the project team.
-
----
-
 ## Acknowledgments
 
 This repository reflects work by the P3 project team and collaborators developing animal-centric AI methods for precision livestock farming, thermal-stress detection, and proactive environmental control.
