@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pig Barn RL Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f5f2; --card:#ffffff; --border:#e1e3dd; --border-strong:#c9ccc3;
+    --text:#22261f; --text-2:#5c6152; --text-3:#8a8f7d;
+    --accent:#3b6b52; --accent-2:#dcece2;
+    --warm:#c05a2e; --warm-2:#f7e2d6;
+    --cold:#2e6fa3; --cold-2:#dbe9f3;
+    --good:#3b6b52; --bad:#a3392e;
+    --radius:8px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px; line-height:1.5;
+  }
+  header{
+    padding:18px 24px; border-bottom:1px solid var(--border); background:var(--card);
+    display:flex; align-items:baseline; gap:12px;
+  }
+  header h1{ font-size:18px; margin:0; font-weight:600; }
+  header p{ margin:0; color:var(--text-2); font-size:13px; }
+  .layout{
+    display:grid; grid-template-columns:280px 1fr; gap:18px;
+    padding:18px; max-width:1400px; margin:0 auto;
+  }
+  @media (max-width:900px){ .layout{ grid-template-columns:1fr; } }
+  .panel{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:16px;
+  }
+  .sidebar > .panel{ margin-bottom:14px; }
+  .sidebar h2{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-3); margin:0 0 10px; font-weight:600;}
+  label.field{ display:block; margin-bottom:10px; }
+  label.field .row{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-2); margin-bottom:4px;}
+  select, input[type=number]{
+    width:100%; padding:6px 8px; border:1px solid var(--border-strong); border-radius:6px;
+    background:#fff; font-size:13px; color:var(--text);
+  }
+  input[type=range]{ width:100%; accent-color:var(--accent); }
+  .checkrow{ display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:6px; color:var(--text-2); flex-wrap:wrap; }
+  .checkrow input[type=number]{ width:64px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  button{
+    font-family:inherit; font-size:13px; padding:7px 10px; border-radius:6px;
+    border:1px solid var(--border-strong); background:#fff; color:var(--text); cursor:pointer;
+  }
+  button:hover{ background:var(--bg); }
+  button.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  button.primary{ background:var(--accent); color:#fff; border-color:var(--accent); width:100%; margin-top:6px; }
+  button.primary:hover{ opacity:.92; background:var(--accent); }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+  .btnrow{ display:flex; gap:8px; margin-top:6px; }
+  .btnrow button{ flex:1; }
+  .main{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+  .cards{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  @media (max-width:700px){ .cards{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .metric{ background:#fbfbf9; border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .metric .label{ font-size:12px; color:var(--text-2); margin-bottom:4px; }
+  .metric .value{ font-size:22px; font-weight:600; }
+  .comfortbar{ display:flex; justify-content:space-between; align-items:center; }
+  .pill{ font-size:12px; padding:3px 10px; border-radius:99px; font-weight:600; }
+  .pill.good{ background:var(--accent-2); color:var(--good); }
+  .pill.bad-cold{ background:var(--cold-2); color:var(--cold); }
+  .pill.bad-hot{ background:var(--warm-2); color:var(--warm); }
+  .chart-wrap{ position:relative; height:260px; }
+  .chart-wrap.small{ height:170px; }
+  .timeline-row{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .timeline-row .name{ width:70px; font-size:12px; color:var(--text-2); flex-shrink:0; }
+  .timeline-track{ flex:1; display:flex; gap:1px; overflow-x:auto; height:16px; border-radius:4px; background:#f0f1ec; }
+  .timeline-cell{ width:4px; flex-shrink:0; height:16px; background:transparent; }
+  .timeline-cell.on{ background:var(--accent); }
+  .statrow{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--border); font-size:13px;}
+  .statrow:first-child{ border-top:none; }
+  .statrow .v{ font-weight:600; }
+  .note{ font-size:12px; color:var(--text-3); margin-top:4px; }
+  h3.panel-title{ font-size:13px; font-weight:600; margin:0 0 10px; color:var(--text); }
+  .badge{ font-size:11px; padding:2px 7px; border-radius:5px; background:var(--accent-2); color:var(--accent); font-weight:600; margin-left:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pig barn RL simulator</h1>
+  <p>Educational demo — not for real barn control</p>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="panel">
+      <h2>Control mode</h2>
+      <select id="controlMode">
+        <option value="manual">Manual</option>
+        <!-- <option value="rule">Rule-based</option> -->
+        <option value="rl">Reinforcement Learning</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h2>Pig composition</h2>
+      <div class="grid3">
+        <label class="field" style="margin-bottom:0;"><div class="row"><span>Piglets</span></div>
+          <input type="number" id="piglets" min="0" max="200" value="10"></label>
+        <label class="field" style="margin-bottom:0;"><div class="row"><span>Young</span></div>
+          <input type="number" id="young" min="0" max="200" value="8"></label>
+        <label class="field" style="margin-bottom:0;"><div class="row"><span>Adults</span></div>
+          <input type="number" id="adults" min="0" max="200" value="6"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Starting conditions</h2>
+      <label class="field"><div class="row"><span>Indoor temperature</span><span id="startTempOut">20°C</span></div>
+        <input type="range" id="startTemp" min="-5" max="40" value="20"></label>
+      <label class="field"><div class="row"><span>Humidity</span><span id="startHumOut">55%</span></div>
+        <input type="range" id="startHum" min="20" max="95" value="55"></label>
+      <label class="field"><div class="row"><span>CO2</span><span id="startCo2Out">420 ppm</span></div>
+        <input type="range" id="startCo2" min="350" max="2000" value="420"></label>
+    </div>
+
+    <div class="panel">
+      <h2>Environment</h2>
+      <label class="field"><div class="row"><span>Outside temperature pattern</span></div>
+        <select id="outsidePattern">
+          <option value="mild">Mild day</option>
+          <option value="cold">Cold spring day</option>
+          <option value="hot">Hot summer day</option>
+        </select>
+      </label>
+      <label class="field"><div class="row"><span>Simulation length</span><span id="simLenOut">48 steps</span></div>
+        <input type="range" id="simLen" min="12" max="120" step="4" value="48"></label>
+      <div class="checkrow">
+        <input type="checkbox" id="sickEvent"> Sick event —
+        <input type="number" id="sickStress" min="0" step="0.5" value="2"> extra stress
+      </div>
+      <div class="checkrow"><input type="checkbox" id="heatStressEvent"> Heat-stress event (extra outside heat)</div>
+    </div>
+
+    <div class="panel">
+      <h2>Preset scenario</h2>
+      <select id="preset">
+        <option value="">— none —</option>
+        <option value="piglets_cold">Piglets, cold spring day</option>
+        <option value="adults_hot">Adults, hot summer day</option>
+        <option value="mixed_mild">Mixed herd, mild day</option>
+        <option value="piglets_sick">Piglets with sick event</option>
+        <option value="high_humidity">High humidity day</option>
+        <option value="high_co2">High CO2 day</option>
+      </select>
+    </div>
+
+    <div class="panel">
+      <h2>Manual equipment <span class="note" id="manualHint">(active in manual mode)</span></h2>
+      <div class="grid2">
+        <button id="btn-h1">Heater 1</button>
+        <button id="btn-h2">Heater 2</button>
+        <button id="btn-f1">Fan 1</button>
+        <button id="btn-f2">Fan 2</button>
+      </div>
+      <button id="btn-spr" style="width:100%;margin-top:8px;">Sprinkler</button>
+    </div>
+
+    <div class="panel">
+      <h2>Run</h2>
+      <label class="field"><div class="row"><span>Speed</span></div>
+        <input type="range" id="speed" min="20" max="500" value="120"></label>
+      <div class="btnrow">
+        <button id="btn-run" class="primary" style="margin-top:0;">Run simulation</button>
+        <button id="btn-reset">Reset</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <div class="cards">
+      <div class="metric"><div class="label">Barn temperature</div><div class="value" id="m-airtemp">–</div></div>
+      <div class="metric"><div class="label">Humidity</div><div class="value" id="m-hum">–</div></div>
+      <div class="metric"><div class="label">CO2</div><div class="value" id="m-co2">–</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="comfortbar">
+        <div>
+          <div class="label" style="font-size:12px;color:var(--text-2);margin-bottom:4px;">Comfort zone (weighted by herd)</div>
+          <div style="font-weight:600;" id="comfortRange">–</div>
+        </div>
+        <span class="pill" id="comfortPill">–</span>
+        <div style="text-align:right;">
+          <div class="label" style="font-size:12px;color:var(--text-2);">Step reward</div>
+          <div style="font-weight:600;" id="m-reward">–</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="label" style="font-size:12px;color:var(--text-2);">Total reward</div>
+          <div style="font-weight:600;" id="m-total">–</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Temperature over time</h3>
+      <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Reward over time</h3>
+      <div class="chart-wrap"><canvas id="rewardChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Environmental time series</h3>
+      <div class="grid2" style="gap:12px;">
+        <div>
+          <div class="label" style="font-size:12px;color:var(--text-2);margin-bottom:6px;">CO2 over time</div>
+          <div class="chart-wrap small"><canvas id="co2Chart"></canvas></div>
+        </div>
+        <div>
+          <div class="label" style="font-size:12px;color:var(--text-2);margin-bottom:6px;">Humidity over time</div>
+          <div class="chart-wrap small"><canvas id="humidityChart"></canvas></div>
+        </div>
+        <div style="grid-column:1 / -1;">
+          <div class="label" style="font-size:12px;color:var(--text-2);margin-bottom:6px;">Thermal stress over time</div>
+          <div class="chart-wrap small"><canvas id="stressChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Action timeline</h3>
+      <div class="timeline-row"><div class="name">Heater 1</div><div class="timeline-track" id="tl-h1"></div></div>
+      <div class="timeline-row"><div class="name">Heater 2</div><div class="timeline-track" id="tl-h2"></div></div>
+      <div class="timeline-row"><div class="name">Fan 1</div><div class="timeline-track" id="tl-f1"></div></div>
+      <div class="timeline-row"><div class="name">Fan 2</div><div class="timeline-track" id="tl-f2"></div></div>
+      <div class="timeline-row"><div class="name">Sprinkler</div><div class="timeline-track" id="tl-spr"></div></div>
+    </div>
+
+    <div class="panel">
+      <h3 class="panel-title">Run summary</h3>
+      <div class="statrow"><span>Percent of time in comfort zone</span><span class="v" id="s-pct">–</span></div>
+      <div class="statrow"><span>Total device-on time (steps)</span><span class="v" id="s-devicetime">–</span></div>
+      <div class="statrow"><span>Sprinkler-on time (steps)</span><span class="v" id="s-sprtime">–</span></div>
+      <div class="statrow"><span>Equipment switches</span><span class="v" id="s-switches">–</span></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const round1 = n => Math.round(n*10)/10;
+
+// ---------- config elements ----------
+const els = {
+  piglets: $('piglets'), young: $('young'), adults: $('adults'),
+  startTemp: $('startTemp'), startHum: $('startHum'), startCo2: $('startCo2'),
+  outsidePattern: $('outsidePattern'), simLen: $('simLen'),
+  sickEvent: $('sickEvent'), sickStress: $('sickStress'), heatStressEvent: $('heatStressEvent'),
+  preset: $('preset'), controlMode: $('controlMode'), speed: $('speed')
+};
+
+function syncOutputs(){
+  $('startTempOut').textContent = els.startTemp.value + '°C';
+  $('startHumOut').textContent = els.startHum.value + '%';
+  $('startCo2Out').textContent = els.startCo2.value + ' ppm';
+  $('simLenOut').textContent = els.simLen.value + ' steps';
+}
+Object.values(els).forEach(el => el.addEventListener('input', syncOutputs));
+syncOutputs();
+
+els.controlMode.addEventListener('change', () => {
+  const mode = els.controlMode.value;
+  $('manualHint').textContent = mode === 'manual' ? '(active in manual mode)' : '(read-only in this mode)';
+  ['btn-h1','btn-h2','btn-f1','btn-f2','btn-spr'].forEach(id => $(id).disabled = mode !== 'manual');
+});
+els.controlMode.dispatchEvent(new Event('change'));
+
+// ---------- presets ----------
+const PRESETS = {
+  piglets_cold:  {piglets:8,  young:0, adults:0, startTemp:8,  startHum:55, startCo2:450, outside:'cold', sick:false, heat:false},
+  adults_hot:    {piglets:0,  young:0, adults:8, startTemp:29, startHum:60, startCo2:450, outside:'hot',  sick:false, heat:false},
+  mixed_mild:    {piglets:3,  young:3, adults:2, startTemp:18, startHum:55, startCo2:450, outside:'mild', sick:false, heat:false},
+  piglets_sick:  {piglets:8,  young:0, adults:0, startTemp:15, startHum:55, startCo2:450, outside:'cold', sick:true,  heat:false},
+  high_humidity: {piglets:0,  young:8, adults:0, startTemp:20, startHum:82, startCo2:450, outside:'mild', sick:false, heat:false},
+  high_co2:      {piglets:0,  young:0, adults:8, startTemp:20, startHum:55, startCo2:1500,outside:'mild', sick:false, heat:false},
+};
+els.preset.addEventListener('change', () => {
+  const p = PRESETS[els.preset.value];
+  if(!p) return;
+  els.piglets.value=p.piglets; els.young.value=p.young; els.adults.value=p.adults;
+  els.startTemp.value=p.startTemp; els.startHum.value=p.startHum; els.startCo2.value=p.startCo2;
+  els.outsidePattern.value=p.outside;
+  els.sickEvent.checked=p.sick; els.heatStressEvent.checked=p.heat;
+  syncOutputs();
+});
+
+// ---------- manual equipment buttons ----------
+const manual = { h1:false, h2:false, f1:false, f2:false, spr:false };
+function wireButton(id, key){
+  $(id).addEventListener('click', () => {
+    if(els.controlMode.value !== 'manual') return;
+    manual[key] = !manual[key];
+    $(id).classList.toggle('on', manual[key]);
+  });
+}
+wireButton('btn-h1','h1'); wireButton('btn-h2','h2');
+wireButton('btn-f1','f1'); wireButton('btn-f2','f2'); wireButton('btn-spr','spr');
+
+// ---------- outside temperature patterns ----------
+function outsideTemp(pattern, hour){
+  const wave = Math.sin(((hour-6)/24)*2*Math.PI);
+  if(pattern==='cold') return 4 + 3*wave;
+  if(pattern==='hot')  return 26 + 7*wave;
+  return 15 + 5*wave; // mild
+}
+
+// ---------- comfort zone ----------
+function comfortZone(piglets, young, adults){
+  const total = piglets+young+adults;
+  let minC, maxC;
+  if(total === 0){ minC=18; maxC=26; }
+  else {
+    minC = (piglets*28 + young*18 + adults*15)/total;
+    maxC = (piglets*34 + young*26 + adults*22)/total;
+  }
+  return {minC, maxC};
+}
+
+function dominantAgeGroup(piglets, young, adults){
+  const total = piglets+young+adults;
+  if(total === 0) return 1;
+  const counts = [piglets, young, adults];
+  const max = Math.max(...counts);
+  const near = counts.filter(c => c >= max*0.75 && c > 0).length;
+  if(near >= 2) return 3; // mixed
+  return counts.indexOf(max);
+}
+
+// ---------- barn model ----------
+function makeBarn(cfg){
+  return {
+    airTemp: cfg.startTemp,
+    perceivedTemp: cfg.startTemp,
+    humidity: cfg.startHum,
+    co2: cfg.startCo2,
+    hour: 0,
+    piglets: cfg.piglets, young: cfg.young, adults: cfg.adults,
+  };
+}
+
+function stepBarn(barn, cfg, equipment){
+  const heaterCount = (equipment.h1?1:0) + (equipment.h2?1:0);
+  const fanCount = (equipment.f1?1:0) + (equipment.f2?1:0);
+  const totalPigs = barn.piglets + barn.young + barn.adults;
+
+  const heatGain = heaterCount*1.6 + totalPigs*0.015;
+  const cooling = fanCount*2 + (equipment.spr?2.5:0);
+  let outside = outsideTemp(cfg.outside, barn.hour);
+  if(cfg.heat) outside += 6;
+  const drift = (outside - barn.airTemp)*0.06;
+  const noise = (Math.random()-0.5)*0.6;
+
+  barn.airTemp += heatGain - cooling + drift + noise;
+  barn.perceivedTemp += 0.08*(barn.airTemp - barn.perceivedTemp);
+
+  barn.humidity += equipment.spr ? 3 : -0.6;
+  barn.humidity = Math.max(20, Math.min(100, barn.humidity));
+
+  barn.co2 += totalPigs*0.06 - fanCount*3;
+  barn.co2 = Math.max(350, Math.min(3000, barn.co2));
+
+  barn.hour = (barn.hour+1) % 24;
+}
+
+// extraStress: a flat penalty added on top of temperature-based stress (used for sick pigs
+// in manual/rule-based mode — being sick isn't fixed by adjusting the temperature).
+function computeReward(perceived, comfort, equipment, humidity, switches, extraStress){
+  let reward = 0;
+  if(perceived >= comfort.minC && perceived <= comfort.maxC){
+    reward += 10;
+  } else if(perceived < comfort.minC){
+    reward -= (comfort.minC - perceived) * 3;
+  } else {
+    reward -= (perceived - comfort.maxC) * 2;
+  }
+  const devicesOn = ['h1','h2','f1','f2','spr'].filter(k => equipment[k]).length;
+  reward -= 0.2 * devicesOn;
+  const heaterOn = equipment.h1 || equipment.h2;
+  const fanOn = equipment.f1 || equipment.f2;
+  if(heaterOn && fanOn) reward -= 3;
+  if(equipment.spr && humidity > 75) reward -= 3;
+  reward -= switches * 0.5;
+  reward -= (extraStress || 0);
+  return reward;
+}
+
+function countSwitches(prev, cur){
+  let n = 0;
+  ['h1','h2','f1','f2','spr'].forEach(k => { if(prev[k] !== cur[k]) n++; });
+  return n;
+}
+
+// ---------- charts ----------
+const tempChart = new Chart($('tempChart'), {
+  type: 'line',
+  data: { labels: [], datasets: [
+    {label:'Air temp', data:[], borderColor:'#2e6fa3', backgroundColor:'transparent', tension:.25, pointRadius:0, yAxisID:'temp'},
+    {label:'Perceived temp', data:[], borderColor:'#c05a2e', backgroundColor:'transparent', tension:.25, pointRadius:0, yAxisID:'temp'},
+    {label:'Comfort min', data:[], borderColor:'#c9ccc3', borderDash:[4,4], pointRadius:0, yAxisID:'temp'},
+    {label:'Comfort max', data:[], borderColor:'#c9ccc3', borderDash:[4,4], pointRadius:0, yAxisID:'temp'},
+  ]},
+  options: {
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{mode:'index', intersect:false},
+    scales:{
+      temp:{ position:'left', title:{display:true,text:'°C'} },
+      x:{ ticks:{maxTicksLimit:8} }
+    },
+    plugins:{ legend:{ position:'bottom', labels:{boxWidth:12, font:{size:11}} } }
+  }
+});
+
+const rewardChart = new Chart($('rewardChart'), {
+  type:'line',
+  data:{ labels:[], datasets:[{label:'Reward', data:[], borderColor:'#3b6b52', backgroundColor:'transparent', tension:.25, pointRadius:0}] },
+  options:{ responsive:true, maintainAspectRatio:false, animation:false,
+    scales:{ y:{ title:{display:true,text:'reward'} }, x:{ ticks:{maxTicksLimit:8} } },
+    plugins:{ legend:{display:false} } }
+});
+
+const co2Chart = new Chart($('co2Chart'), {
+  type:'line',
+  data:{ labels:[], datasets:[{label:'CO2', data:[], borderColor:'#6b5b95', backgroundColor:'transparent', tension:.25, pointRadius:0}] },
+  options:{ responsive:true, maintainAspectRatio:false, animation:false, scales:{ y:{ title:{display:true,text:'ppm'} }, x:{ ticks:{maxTicksLimit:6} } }, plugins:{ legend:{display:false} } }
+});
+
+const humidityChart = new Chart($('humidityChart'), {
+  type:'line',
+  data:{ labels:[], datasets:[{label:'Humidity', data:[], borderColor:'#2e6fa3', backgroundColor:'transparent', tension:.25, pointRadius:0}] },
+  options:{ responsive:true, maintainAspectRatio:false, animation:false, scales:{ y:{ title:{display:true,text:'%'} }, x:{ ticks:{maxTicksLimit:6} } }, plugins:{ legend:{display:false} } }
+});
+
+const stressChart = new Chart($('stressChart'), {
+  type:'line',
+  data:{ labels:[], datasets:[{label:'Thermal stress', data:[], borderColor:'#c05a2e', backgroundColor:'transparent', tension:.25, pointRadius:0}] },
+  options:{ responsive:true, maintainAspectRatio:false, animation:false, scales:{ y:{ title:{display:true,text:'stress'} }, x:{ ticks:{maxTicksLimit:6} } }, plugins:{ legend:{display:false} } }
+});
+
+// ---------- timeline ----------
+const TL_IDS = {h1:'tl-h1', h2:'tl-h2', f1:'tl-f1', f2:'tl-f2', spr:'tl-spr'};
+function resetTimeline(){ Object.values(TL_IDS).forEach(id => $(id).innerHTML = ''); }
+function pushTimeline(equipment){
+  Object.entries(TL_IDS).forEach(([key,id]) => {
+    const cell = document.createElement('div');
+    cell.className = 'timeline-cell' + (equipment[key] ? ' on' : '');
+    $(id).appendChild(cell);
+  });
+}
+
+function updateMetrics(barn, comfort, reward, total){
+  $('m-airtemp').textContent = round1(barn.airTemp) + '°C';
+  $('m-hum').textContent = round1(barn.humidity) + '%';
+  $('m-co2').textContent = Math.round(barn.co2) + ' ppm';
+  $('comfortRange').textContent = round1(comfort.minC) + '°C – ' + round1(comfort.maxC) + '°C';
+  $('m-reward').textContent = (reward>=0?'+':'') + round1(reward);
+  $('m-total').textContent = round1(total);
+
+  const pill = $('comfortPill');
+  if(barn.perceivedTemp < comfort.minC){ pill.textContent='too cold'; pill.className='pill bad-cold'; }
+  else if(barn.perceivedTemp > comfort.maxC){ pill.textContent='too hot'; pill.className='pill bad-hot'; }
+  else { pill.textContent='in comfort zone'; pill.className='pill good'; }
+}
+
+function computeThermalStress(barn, comfort){
+  return Math.max(0, comfort.minC - barn.perceivedTemp) + Math.max(0, barn.perceivedTemp - comfort.maxC);
+}
+
+function pushTempChartPoint(label, barn, comfort){
+  tempChart.data.labels.push(label);
+  tempChart.data.datasets[0].data.push(round1(barn.airTemp));
+  tempChart.data.datasets[1].data.push(round1(barn.perceivedTemp));
+  tempChart.data.datasets[2].data.push(round1(comfort.minC));
+  tempChart.data.datasets[3].data.push(round1(comfort.maxC));
+  tempChart.update('none');
+}
+
+function pushRewardChartPoint(label, reward){
+  rewardChart.data.labels.push(label);
+  rewardChart.data.datasets[0].data.push(round1(reward));
+  rewardChart.update('none');
+}
+
+function pushSeriesChartPoint(chart, label, value){
+  chart.data.labels.push(label);
+  chart.data.datasets[0].data.push(round1(value));
+  chart.update('none');
+}
+
+function resetCharts(){
+  [tempChart, rewardChart, co2Chart, humidityChart, stressChart].forEach(chart => {
+    chart.data.labels = [];
+    chart.data.datasets.forEach(d => d.data = []);
+    chart.update('none');
+  });
+}
+
+// ---------- summary stats ----------
+function makeStatsTracker(){
+  return { inZone:0, steps:0, deviceSteps:0, sprSteps:0, switches:0, prevEquip:{h1:false,h2:false,f1:false,f2:false,spr:false} };
+}
+function trackStats(stats, barn, comfort, equipment){
+  stats.steps++;
+  if(barn.perceivedTemp >= comfort.minC && barn.perceivedTemp <= comfort.maxC) stats.inZone++;
+  const devicesOn = ['h1','h2','f1','f2','spr'].filter(k => equipment[k]).length;
+  stats.deviceSteps += devicesOn;
+  if(equipment.spr) stats.sprSteps++;
+  stats.switches += countSwitches(stats.prevEquip, equipment);
+  stats.prevEquip = {...equipment};
+}
+function renderStats(stats){
+  $('s-pct').textContent = stats.steps ? Math.round(100*stats.inZone/stats.steps) + '%' : '–';
+  $('s-devicetime').textContent = stats.deviceSteps;
+  $('s-sprtime').textContent = stats.sprSteps;
+  $('s-switches').textContent = stats.switches;
+}
+
+function readConfig(){
+  return {
+    piglets: Math.max(0, +els.piglets.value || 0),
+    young: Math.max(0, +els.young.value || 0),
+    adults: Math.max(0, +els.adults.value || 0),
+    startTemp: +els.startTemp.value, startHum: +els.startHum.value, startCo2: +els.startCo2.value,
+    outside: els.outsidePattern.value,
+    sick: els.sickEvent.checked, sickStress: Math.max(0, +els.sickStress.value || 0),
+    heat: els.heatStressEvent.checked,
+    simLen: +els.simLen.value,
+  };
+}
+
+const API_URL = '/predict';
+
+function buildPredictPayload(session, equipment){
+  return {
+    config: {
+      herd: { counts: { piglets: session.cfg.piglets, young: session.cfg.young, adults: session.cfg.adults } },
+      eval: { sensors: { humidity: true, co2: true, clock: true } },
+    },
+    state: {
+      air_temp: session.barn.airTemp,
+      perceived_temp: session.barn.perceivedTemp,
+      humidity: session.barn.humidity,
+      co2: session.barn.co2,
+      clock_hour: session.barn.hour,
+      heaters: [equipment.h1 ? 1 : 0, equipment.h2 ? 1 : 0],
+      fans: [equipment.f1 ? 1 : 0, equipment.f2 ? 1 : 0],
+      sprinkler: equipment.spr ? 1.0 : 0.0,
+    },
+  };
+}
+
+async function predictEquipment(session, currentEquipment){
+  const payload = buildPredictPayload(session, currentEquipment);
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if(!res.ok){
+    const text = await res.text();
+    throw new Error(`Prediction request failed: ${res.status} ${text}`);
+  }
+  const data = await res.json();
+  if(!Array.isArray(data.action)) throw new Error('Prediction response missing action array');
+  return {
+    h1: data.action[0] === 1,
+    h2: data.action[1] === 1,
+    f1: data.action[2] === 1,
+    f2: data.action[3] === 1,
+    spr: data.action[4] === 1,
+  };
+}
+
+// ---------- run / pause / continue / reset ----------
+// `session` holds all state for an in-progress run so Pause can stop the timer
+// without losing progress, and Continue can pick back up from exactly there.
+let session = null;
+let running = false;
+let timer = null;
+
+function speedDelay(){ return 520 - (+els.speed.value); }
+
+function createSession(){
+  const mode = els.controlMode.value;
+  const cfg = readConfig();
+  const comfort = comfortZone(cfg.piglets, cfg.young, cfg.adults);
+
+  return {
+    mode, cfg, comfort,
+    barn: makeBarn(cfg), stats: makeStatsTracker(), step: 0, total: 0,
+  };
+}
+
+function resetUI(){
+  resetCharts();
+  resetTimeline();
+  ['m-airtemp','m-hum','m-co2','m-reward','m-total'].forEach(id => $(id).textContent='–');
+  $('comfortRange').textContent='–';
+  $('comfortPill').textContent='–'; $('comfortPill').className='pill';
+  ['s-pct','s-devicetime','s-sprtime','s-switches'].forEach(id => $(id).textContent='–');
+}
+
+$('btn-reset').addEventListener('click', () => {
+  running = false;
+  clearTimeout(timer);
+  session = null;
+  $('btn-run').textContent = 'Run simulation';
+  resetUI();
+});
+
+$('btn-run').addEventListener('click', () => {
+  if(running){
+    // Pause: stop the timer but keep the session so we can resume later.
+    running = false;
+    clearTimeout(timer);
+    $('btn-run').textContent = 'Continue';
+    return;
+  }
+  if(session === null){
+    session = createSession();
+    resetUI();
+  }
+  running = true;
+  $('btn-run').textContent = 'Pause';
+  tick();
+});
+
+async function tick(){
+  if(!running) return;
+  if(session.mode === 'rl') await rlTick();
+  else singleEpisodeTick();
+}
+
+function singleEpisodeTick(){
+  const s = session;
+  if(s.step >= s.cfg.simLen){
+    running = false; session = null;
+    $('btn-run').textContent = 'Run simulation';
+    return;
+  }
+
+  let equipment;
+  if(s.mode === 'manual'){
+    equipment = {...manual};
+  } else { // rule-based
+    equipment = {h1:false,h2:false,f1:false,f2:false,spr:false};
+    if(s.barn.perceivedTemp < s.comfort.minC) equipment.h1 = true;
+    if(s.barn.perceivedTemp > s.comfort.maxC){
+      equipment.f1 = true;
+      if(s.barn.perceivedTemp > s.comfort.maxC + 3 && s.barn.humidity <= 75) equipment.spr = true;
+    }
+  }
+
+  const switches = countSwitches(s.stats.prevEquip, equipment);
+  stepBarn(s.barn, s.cfg, equipment);
+  const extraStress = s.cfg.sick ? s.cfg.sickStress : 0;
+  const reward = computeReward(s.barn.perceivedTemp, s.comfort, equipment, s.barn.humidity, switches, extraStress);
+  s.total += reward;
+  trackStats(s.stats, s.barn, s.comfort, equipment);
+
+  updateMetrics(s.barn, s.comfort, reward, s.total);
+  pushTempChartPoint(s.step, s.barn, s.comfort);
+  pushRewardChartPoint(s.step, reward);
+  pushSeriesChartPoint(co2Chart, s.step, s.barn.co2);
+  pushSeriesChartPoint(humidityChart, s.step, s.barn.humidity);
+  pushSeriesChartPoint(stressChart, s.step, computeThermalStress(s.barn, s.comfort));
+  pushTimeline(equipment);
+  renderStats(s.stats);
+
+  s.step++;
+  timer = setTimeout(tick, speedDelay());
+}
+
+async function rlTick(){
+  const s = session;
+  if(s.step >= s.cfg.simLen){
+    running = false;
+    session = null;
+    $('btn-run').textContent = 'Run simulation';
+    return;
+  }
+
+  let equipment;
+  try {
+    equipment = await predictEquipment(s, s.stats.prevEquip);
+  } catch (err) {
+    console.error(err);
+    running = false;
+    session = null;
+    $('btn-run').textContent = 'Run simulation';
+    alert('Prediction failed. Check the backend server and console.');
+    return;
+  }
+
+  const switches = countSwitches(s.stats.prevEquip, equipment);
+  stepBarn(s.barn, s.cfg, equipment);
+  const extraStress = s.cfg.sick ? s.cfg.sickStress : 0;
+  const reward = computeReward(s.barn.perceivedTemp, s.comfort, equipment, s.barn.humidity, switches, extraStress);
+  s.total += reward;
+  trackStats(s.stats, s.barn, s.comfort, equipment);
+
+  updateMetrics(s.barn, s.comfort, reward, s.total);
+  pushTempChartPoint(s.step, s.barn, s.comfort);
+  pushRewardChartPoint(s.step, reward);
+  pushSeriesChartPoint(co2Chart, s.step, s.barn.co2);
+  pushSeriesChartPoint(humidityChart, s.step, s.barn.humidity);
+  pushSeriesChartPoint(stressChart, s.step, computeThermalStress(s.barn, s.comfort));
+  pushTimeline(equipment);
+  renderStats(s.stats);
+
+  s.step++;
+  timer = setTimeout(tick, speedDelay());
+}
+</script>
+</body>
+</html>
