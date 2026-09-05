@@ -38,6 +38,7 @@
   }
   .sidebar > .panel{ margin-bottom:14px; }
   .sidebar h2{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-3); margin:0 0 10px; font-weight:600;}
+  .sidebar h2 .note{ text-transform:none; letter-spacing:0; font-weight:400; margin:0; }
   label.field{ display:block; margin-bottom:10px; }
   label.field .row{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-2); margin-bottom:4px;}
   select, input[type=number]{
@@ -45,8 +46,6 @@
     background:#fff; font-size:13px; color:var(--text);
   }
   input[type=range]{ width:100%; accent-color:var(--accent); }
-  .checkrow{ display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:6px; color:var(--text-2); flex-wrap:wrap; }
-  .checkrow input[type=number]{ width:64px; }
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
   button{
@@ -60,8 +59,16 @@
   button:disabled{ opacity:.45; cursor:not-allowed; }
   .btnrow{ display:flex; gap:8px; margin-top:6px; }
   .btnrow button{ flex:1; }
+  .equip-group{ display:flex; flex-direction:column; gap:6px; }
+  .equip-label{ font-size:11px; text-transform:uppercase; letter-spacing:.04em; font-weight:600; }
+  .equip-group.heat .equip-label{ color:var(--warm); }
+  .equip-group.cool .equip-label{ color:var(--cold); }
+  button.on.heat{ background:var(--warm); border-color:var(--warm); }
+  button.on.cool{ background:var(--cold); border-color:var(--cold); }
+  button.linkbtn{ border:none; background:none; padding:0; font-size:12px; color:var(--accent); text-decoration:underline; }
+  button.linkbtn:hover{ background:none; }
   .main{ display:flex; flex-direction:column; gap:14px; min-width:0; }
-  .cards{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  .cards{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
   @media (max-width:700px){ .cards{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
   .metric{ background:#fbfbf9; border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
   .metric .label{ font-size:12px; color:var(--text-2); margin-bottom:4px; }
@@ -78,6 +85,8 @@
   .timeline-track{ flex:1; display:flex; gap:1px; overflow-x:auto; height:16px; border-radius:4px; background:#f0f1ec; }
   .timeline-cell{ width:4px; flex-shrink:0; height:16px; background:transparent; }
   .timeline-cell.on{ background:var(--accent); }
+  .timeline-track.heat .timeline-cell.on{ background:var(--warm); }
+  .timeline-track.cool .timeline-cell.on{ background:var(--cold); }
   .statrow{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--border); font-size:13px;}
   .statrow:first-child{ border-top:none; }
   .statrow .v{ font-weight:600; }
@@ -138,13 +147,15 @@
           <option value="hot">Hot summer day</option>
         </select>
       </label>
+      <div class="grid2">
+        <label class="field"><div class="row"><span>Base temp</span><span>°C</span></div>
+          <input type="number" id="outsideBase" min="-30" max="50" step="0.5"></label>
+        <label class="field"><div class="row"><span>Day swing</span><span>±°C</span></div>
+          <input type="number" id="outsideSwing" min="0" max="25" step="0.5"></label>
+      </div>
+      <div class="note" style="margin:-4px 0 12px;"><span id="outsideRangeOut">–</span> · <button class="linkbtn" id="outsideReset">reset</button></div>
       <label class="field"><div class="row"><span>Simulation length</span><span id="simLenOut">48 steps</span></div>
         <input type="range" id="simLen" min="12" max="120" step="4" value="48"></label>
-      <div class="checkrow">
-        <input type="checkbox" id="sickEvent"> Sick event —
-        <input type="number" id="sickStress" min="0" step="0.5" value="2"> extra stress
-      </div>
-      <div class="checkrow"><input type="checkbox" id="heatStressEvent"> Heat-stress event (extra outside heat)</div>
     </div>
 
     <div class="panel">
@@ -154,7 +165,6 @@
         <option value="piglets_cold">Piglets, cold spring day</option>
         <option value="adults_hot">Adults, hot summer day</option>
         <option value="mixed_mild">Mixed herd, mild day</option>
-        <option value="piglets_sick">Piglets with sick event</option>
         <option value="high_humidity">High humidity day</option>
         <option value="high_co2">High CO2 day</option>
       </select>
@@ -163,12 +173,19 @@
     <div class="panel">
       <h2>Manual equipment <span class="note" id="manualHint">(active in manual mode)</span></h2>
       <div class="grid2">
-        <button id="btn-h1">Heater 1</button>
-        <button id="btn-h2">Heater 2</button>
-        <button id="btn-f1">Fan 1</button>
-        <button id="btn-f2">Fan 2</button>
+        <div class="equip-group heat">
+          <div class="equip-label">Heating</div>
+          <button id="btn-h1" class="heat">Heater 1</button>
+          <button id="btn-h2" class="heat">Heater 2</button>
+        </div>
+        <div class="equip-group cool">
+          <div class="equip-label">Cooling</div>
+          <button id="btn-f1" class="cool">Fan 1</button>
+          <button id="btn-f2" class="cool">Fan 2</button>
+          <button id="btn-spr" class="cool">Sprinkler</button>
+        </div>
       </div>
-      <button id="btn-spr" style="width:100%;margin-top:8px;">Sprinkler</button>
+      <div class="note" id="equipHint" style="margin-top:8px;">Heating and cooling never run together</div>
     </div>
 
     <div class="panel">
@@ -188,6 +205,7 @@
 
     <div class="cards">
       <div class="metric"><div class="label">Barn temperature</div><div class="value" id="m-airtemp">–</div></div>
+      <div class="metric"><div class="label">Outside temperature</div><div class="value" id="m-outside">–</div></div>
       <div class="metric"><div class="label">Humidity</div><div class="value" id="m-hum">–</div></div>
       <div class="metric"><div class="label">CO2</div><div class="value" id="m-co2">–</div></div>
     </div>
@@ -240,11 +258,11 @@
 
     <div class="panel">
       <h3 class="panel-title">Action timeline</h3>
-      <div class="timeline-row"><div class="name">Heater 1</div><div class="timeline-track" id="tl-h1"></div></div>
-      <div class="timeline-row"><div class="name">Heater 2</div><div class="timeline-track" id="tl-h2"></div></div>
-      <div class="timeline-row"><div class="name">Fan 1</div><div class="timeline-track" id="tl-f1"></div></div>
-      <div class="timeline-row"><div class="name">Fan 2</div><div class="timeline-track" id="tl-f2"></div></div>
-      <div class="timeline-row"><div class="name">Sprinkler</div><div class="timeline-track" id="tl-spr"></div></div>
+      <div class="timeline-row"><div class="name">Heater 1</div><div class="timeline-track heat" id="tl-h1"></div></div>
+      <div class="timeline-row"><div class="name">Heater 2</div><div class="timeline-track heat" id="tl-h2"></div></div>
+      <div class="timeline-row"><div class="name">Fan 1</div><div class="timeline-track cool" id="tl-f1"></div></div>
+      <div class="timeline-row"><div class="name">Fan 2</div><div class="timeline-track cool" id="tl-f2"></div></div>
+      <div class="timeline-row"><div class="name">Sprinkler</div><div class="timeline-track cool" id="tl-spr"></div></div>
     </div>
 
     <div class="panel">
@@ -253,6 +271,7 @@
       <div class="statrow"><span>Total device-on time (steps)</span><span class="v" id="s-devicetime">–</span></div>
       <div class="statrow"><span>Sprinkler-on time (steps)</span><span class="v" id="s-sprtime">–</span></div>
       <div class="statrow"><span>Equipment switches</span><span class="v" id="s-switches">–</span></div>
+      <div class="statrow"><span>Conflicting actions blocked</span><span class="v" id="s-blocked">–</span></div>
     </div>
 
   </div>
@@ -267,9 +286,8 @@ const round1 = n => Math.round(n*10)/10;
 const els = {
   piglets: $('piglets'), young: $('young'), adults: $('adults'),
   startTemp: $('startTemp'), startHum: $('startHum'), startCo2: $('startCo2'),
-  outsidePattern: $('outsidePattern'), simLen: $('simLen'),
-  sickEvent: $('sickEvent'), sickStress: $('sickStress'), heatStressEvent: $('heatStressEvent'),
-  preset: $('preset'), controlMode: $('controlMode'), speed: $('speed')
+  outsidePattern: $('outsidePattern'), outsideBase: $('outsideBase'), outsideSwing: $('outsideSwing'),
+  simLen: $('simLen'), preset: $('preset'), controlMode: $('controlMode'), speed: $('speed')
 };
 
 function syncOutputs(){
@@ -277,25 +295,19 @@ function syncOutputs(){
   $('startHumOut').textContent = els.startHum.value + '%';
   $('startCo2Out').textContent = els.startCo2.value + ' ppm';
   $('simLenOut').textContent = els.simLen.value + ' steps';
+  const base = +els.outsideBase.value || 0, swing = Math.max(0, +els.outsideSwing.value || 0);
+  $('outsideRangeOut').textContent = 'Outside runs ' + round1(base-swing) + '°C to ' + round1(base+swing) + '°C, warmest at noon';
 }
 Object.values(els).forEach(el => el.addEventListener('input', syncOutputs));
 syncOutputs();
 
-els.controlMode.addEventListener('change', () => {
-  const mode = els.controlMode.value;
-  $('manualHint').textContent = mode === 'manual' ? '(active in manual mode)' : '(read-only in this mode)';
-  ['btn-h1','btn-h2','btn-f1','btn-f2','btn-spr'].forEach(id => $(id).disabled = mode !== 'manual');
-});
-els.controlMode.dispatchEvent(new Event('change'));
-
 // ---------- presets ----------
 const PRESETS = {
-  piglets_cold:  {piglets:8,  young:0, adults:0, startTemp:8,  startHum:55, startCo2:450, outside:'cold', sick:false, heat:false},
-  adults_hot:    {piglets:0,  young:0, adults:8, startTemp:29, startHum:60, startCo2:450, outside:'hot',  sick:false, heat:false},
-  mixed_mild:    {piglets:3,  young:3, adults:2, startTemp:18, startHum:55, startCo2:450, outside:'mild', sick:false, heat:false},
-  piglets_sick:  {piglets:8,  young:0, adults:0, startTemp:15, startHum:55, startCo2:450, outside:'cold', sick:true,  heat:false},
-  high_humidity: {piglets:0,  young:8, adults:0, startTemp:20, startHum:82, startCo2:450, outside:'mild', sick:false, heat:false},
-  high_co2:      {piglets:0,  young:0, adults:8, startTemp:20, startHum:55, startCo2:1500,outside:'mild', sick:false, heat:false},
+  piglets_cold:  {piglets:8,  young:0, adults:0, startTemp:8,  startHum:55, startCo2:450, outside:'cold'},
+  adults_hot:    {piglets:0,  young:0, adults:8, startTemp:29, startHum:60, startCo2:450, outside:'hot'},
+  mixed_mild:    {piglets:3,  young:3, adults:2, startTemp:18, startHum:55, startCo2:450, outside:'mild'},
+  high_humidity: {piglets:0,  young:8, adults:0, startTemp:20, startHum:82, startCo2:450, outside:'mild'},
+  high_co2:      {piglets:0,  young:0, adults:8, startTemp:20, startHum:55, startCo2:1500,outside:'mild'},
 };
 els.preset.addEventListener('change', () => {
   const p = PRESETS[els.preset.value];
@@ -303,29 +315,90 @@ els.preset.addEventListener('change', () => {
   els.piglets.value=p.piglets; els.young.value=p.young; els.adults.value=p.adults;
   els.startTemp.value=p.startTemp; els.startHum.value=p.startHum; els.startCo2.value=p.startCo2;
   els.outsidePattern.value=p.outside;
-  els.sickEvent.checked=p.sick; els.heatStressEvent.checked=p.heat;
-  syncOutputs();
+  loadPatternInputs();
 });
+
+// ---------- equipment conflict rules ----------
+// heating and cooling never run at the same time, it makes no physical sense
+const heatingOn = e => e.h1 || e.h2;
+const coolingOn = e => e.f1 || e.f2 || e.spr;
+const hasConflict = e => heatingOn(e) && coolingOn(e);
+
+// if both sides are asked for, keep the side the barn actually needs
+function resolveConflicts(equipment, barn, comfort){
+  if(!hasConflict(equipment)) return equipment;
+  const mid = (comfort.minC + comfort.maxC)/2;
+  if(barn.perceivedTemp < mid) return {...equipment, f1:false, f2:false, spr:false};
+  return {...equipment, h1:false, h2:false};
+}
 
 // ---------- manual equipment buttons ----------
 const manual = { h1:false, h2:false, f1:false, f2:false, spr:false };
+const HEAT_BTNS = ['btn-h1','btn-h2'];
+const COOL_BTNS = ['btn-f1','btn-f2','btn-spr'];
+
+// grey out whichever side would clash with what is already running
+function refreshManualButtons(){
+  const isManual = els.controlMode.value === 'manual';
+  const lockHeat = coolingOn(manual), lockCool = heatingOn(manual);
+  HEAT_BTNS.forEach(id => $(id).disabled = !isManual || lockHeat);
+  COOL_BTNS.forEach(id => $(id).disabled = !isManual || lockCool);
+  $('equipHint').textContent = lockHeat ? 'Turn cooling off before using heaters'
+    : lockCool ? 'Turn heaters off before using cooling'
+    : 'Heating and cooling never run together';
+}
 function wireButton(id, key){
   $(id).addEventListener('click', () => {
     if(els.controlMode.value !== 'manual') return;
     manual[key] = !manual[key];
     $(id).classList.toggle('on', manual[key]);
+    refreshManualButtons();
   });
 }
 wireButton('btn-h1','h1'); wireButton('btn-h2','h2');
 wireButton('btn-f1','f1'); wireButton('btn-f2','f2'); wireButton('btn-spr','spr');
 
+els.controlMode.addEventListener('change', () => {
+  const mode = els.controlMode.value;
+  $('manualHint').textContent = mode === 'manual' ? '(active in manual mode)' : '(read-only in this mode)';
+  refreshManualButtons();
+});
+els.controlMode.dispatchEvent(new Event('change'));
+
 // ---------- outside temperature patterns ----------
+// each pattern is a daily sine wave: a base temp plus a swing that peaks at noon
+const PATTERN_DEFAULTS = {
+  cold: {base:4,  swing:3},
+  mild: {base:15, swing:5},
+  hot:  {base:26, swing:7},
+};
+const patterns = structuredClone(PATTERN_DEFAULTS);
+
 function outsideTemp(pattern, hour){
   const wave = Math.sin(((hour-6)/24)*2*Math.PI);
-  if(pattern==='cold') return 4 + 3*wave;
-  if(pattern==='hot')  return 26 + 7*wave;
-  return 15 + 5*wave; // mild
+  return pattern.base + pattern.swing*wave;
 }
+
+// the two inputs always show the selected pattern, edits stick to that pattern
+function loadPatternInputs(){
+  const p = patterns[els.outsidePattern.value];
+  els.outsideBase.value = p.base;
+  els.outsideSwing.value = p.swing;
+  syncOutputs();
+}
+function savePatternInputs(){
+  const p = patterns[els.outsidePattern.value];
+  p.base = +els.outsideBase.value || 0;
+  p.swing = Math.max(0, +els.outsideSwing.value || 0);
+}
+els.outsidePattern.addEventListener('change', loadPatternInputs);
+els.outsideBase.addEventListener('input', savePatternInputs);
+els.outsideSwing.addEventListener('input', savePatternInputs);
+$('outsideReset').addEventListener('click', () => {
+  patterns[els.outsidePattern.value] = {...PATTERN_DEFAULTS[els.outsidePattern.value]};
+  loadPatternInputs();
+});
+loadPatternInputs();
 
 // ---------- comfort zone ----------
 function comfortZone(piglets, young, adults){
@@ -356,6 +429,7 @@ function makeBarn(cfg){
     perceivedTemp: cfg.startTemp,
     humidity: cfg.startHum,
     co2: cfg.startCo2,
+    outside: outsideTemp(cfg.outside, 0),
     hour: 0,
     piglets: cfg.piglets, young: cfg.young, adults: cfg.adults,
   };
@@ -368,8 +442,7 @@ function stepBarn(barn, cfg, equipment){
 
   const heatGain = heaterCount*1.6 + totalPigs*0.015;
   const cooling = fanCount*2 + (equipment.spr?2.5:0);
-  let outside = outsideTemp(cfg.outside, barn.hour);
-  if(cfg.heat) outside += 6;
+  const outside = outsideTemp(cfg.outside, barn.hour);
   const drift = (outside - barn.airTemp)*0.06;
   const noise = (Math.random()-0.5)*0.6;
 
@@ -382,12 +455,11 @@ function stepBarn(barn, cfg, equipment){
   barn.co2 += totalPigs*0.06 - fanCount*3;
   barn.co2 = Math.max(350, Math.min(3000, barn.co2));
 
+  barn.outside = outside;
   barn.hour = (barn.hour+1) % 24;
 }
 
-// extraStress: a flat penalty added on top of temperature-based stress (used for sick pigs
-// in manual/rule-based mode — being sick isn't fixed by adjusting the temperature).
-function computeReward(perceived, comfort, equipment, humidity, switches, extraStress){
+function computeReward(perceived, comfort, equipment, humidity, switches){
   let reward = 0;
   if(perceived >= comfort.minC && perceived <= comfort.maxC){
     reward += 10;
@@ -403,7 +475,6 @@ function computeReward(perceived, comfort, equipment, humidity, switches, extraS
   if(heaterOn && fanOn) reward -= 3;
   if(equipment.spr && humidity > 75) reward -= 3;
   reward -= switches * 0.5;
-  reward -= (extraStress || 0);
   return reward;
 }
 
@@ -419,6 +490,7 @@ const tempChart = new Chart($('tempChart'), {
   data: { labels: [], datasets: [
     {label:'Air temp', data:[], borderColor:'#2e6fa3', backgroundColor:'transparent', tension:.25, pointRadius:0, yAxisID:'temp'},
     {label:'Perceived temp', data:[], borderColor:'#c05a2e', backgroundColor:'transparent', tension:.25, pointRadius:0, yAxisID:'temp'},
+    {label:'Outside temp', data:[], borderColor:'#8a8f7d', backgroundColor:'transparent', borderDash:[2,3], tension:.25, pointRadius:0, yAxisID:'temp'},
     {label:'Comfort min', data:[], borderColor:'#c9ccc3', borderDash:[4,4], pointRadius:0, yAxisID:'temp'},
     {label:'Comfort max', data:[], borderColor:'#c9ccc3', borderDash:[4,4], pointRadius:0, yAxisID:'temp'},
   ]},
@@ -472,6 +544,7 @@ function pushTimeline(equipment){
 
 function updateMetrics(barn, comfort, reward, total){
   $('m-airtemp').textContent = round1(barn.airTemp) + '°C';
+  $('m-outside').textContent = round1(barn.outside) + '°C';
   $('m-hum').textContent = round1(barn.humidity) + '%';
   $('m-co2').textContent = Math.round(barn.co2) + ' ppm';
   $('comfortRange').textContent = round1(comfort.minC) + '°C – ' + round1(comfort.maxC) + '°C';
@@ -492,8 +565,9 @@ function pushTempChartPoint(label, barn, comfort){
   tempChart.data.labels.push(label);
   tempChart.data.datasets[0].data.push(round1(barn.airTemp));
   tempChart.data.datasets[1].data.push(round1(barn.perceivedTemp));
-  tempChart.data.datasets[2].data.push(round1(comfort.minC));
-  tempChart.data.datasets[3].data.push(round1(comfort.maxC));
+  tempChart.data.datasets[2].data.push(round1(barn.outside));
+  tempChart.data.datasets[3].data.push(round1(comfort.minC));
+  tempChart.data.datasets[4].data.push(round1(comfort.maxC));
   tempChart.update('none');
 }
 
@@ -519,7 +593,7 @@ function resetCharts(){
 
 // ---------- summary stats ----------
 function makeStatsTracker(){
-  return { inZone:0, steps:0, deviceSteps:0, sprSteps:0, switches:0, prevEquip:{h1:false,h2:false,f1:false,f2:false,spr:false} };
+  return { inZone:0, steps:0, deviceSteps:0, sprSteps:0, switches:0, blocked:0, prevEquip:{h1:false,h2:false,f1:false,f2:false,spr:false} };
 }
 function trackStats(stats, barn, comfort, equipment){
   stats.steps++;
@@ -535,6 +609,7 @@ function renderStats(stats){
   $('s-devicetime').textContent = stats.deviceSteps;
   $('s-sprtime').textContent = stats.sprSteps;
   $('s-switches').textContent = stats.switches;
+  $('s-blocked').textContent = stats.blocked;
 }
 
 function readConfig(){
@@ -543,9 +618,7 @@ function readConfig(){
     young: Math.max(0, +els.young.value || 0),
     adults: Math.max(0, +els.adults.value || 0),
     startTemp: +els.startTemp.value, startHum: +els.startHum.value, startCo2: +els.startCo2.value,
-    outside: els.outsidePattern.value,
-    sick: els.sickEvent.checked, sickStress: Math.max(0, +els.sickStress.value || 0),
-    heat: els.heatStressEvent.checked,
+    outside: {...patterns[els.outsidePattern.value]},
     simLen: +els.simLen.value,
   };
 }
@@ -616,10 +689,10 @@ function createSession(){
 function resetUI(){
   resetCharts();
   resetTimeline();
-  ['m-airtemp','m-hum','m-co2','m-reward','m-total'].forEach(id => $(id).textContent='–');
+  ['m-airtemp','m-outside','m-hum','m-co2','m-reward','m-total'].forEach(id => $(id).textContent='–');
   $('comfortRange').textContent='–';
   $('comfortPill').textContent='–'; $('comfortPill').className='pill';
-  ['s-pct','s-devicetime','s-sprtime','s-switches'].forEach(id => $(id).textContent='–');
+  ['s-pct','s-devicetime','s-sprtime','s-switches','s-blocked'].forEach(id => $(id).textContent='–');
 }
 
 $('btn-reset').addEventListener('click', () => {
@@ -666,8 +739,10 @@ function singleEpisodeTick(){
     equipment = {...manual};
   } else { // rule-based
     equipment = {h1:false,h2:false,f1:false,f2:false,spr:false};
-    if(s.barn.perceivedTemp < s.comfort.minC) equipment.h1 = true;
-    if(s.barn.perceivedTemp > s.comfort.maxC){
+    const tooCold = s.barn.perceivedTemp < s.comfort.minC;
+    const tooHot = s.barn.perceivedTemp > s.comfort.maxC;
+    if(tooCold && !coolingOn(equipment)) equipment.h1 = true;
+    if(tooHot && !heatingOn(equipment)){
       equipment.f1 = true;
       if(s.barn.perceivedTemp > s.comfort.maxC + 3 && s.barn.humidity <= 75) equipment.spr = true;
     }
@@ -675,8 +750,7 @@ function singleEpisodeTick(){
 
   const switches = countSwitches(s.stats.prevEquip, equipment);
   stepBarn(s.barn, s.cfg, equipment);
-  const extraStress = s.cfg.sick ? s.cfg.sickStress : 0;
-  const reward = computeReward(s.barn.perceivedTemp, s.comfort, equipment, s.barn.humidity, switches, extraStress);
+  const reward = computeReward(s.barn.perceivedTemp, s.comfort, equipment, s.barn.humidity, switches);
   s.total += reward;
   trackStats(s.stats, s.barn, s.comfort, equipment);
 
@@ -714,10 +788,13 @@ async function rlTick(){
     return;
   }
 
+  // the policy can ask for heat and cooling at once, we don't let that through
+  if(hasConflict(equipment)) s.stats.blocked++;
+  equipment = resolveConflicts(equipment, s.barn, s.comfort);
+
   const switches = countSwitches(s.stats.prevEquip, equipment);
   stepBarn(s.barn, s.cfg, equipment);
-  const extraStress = s.cfg.sick ? s.cfg.sickStress : 0;
-  const reward = computeReward(s.barn.perceivedTemp, s.comfort, equipment, s.barn.humidity, switches, extraStress);
+  const reward = computeReward(s.barn.perceivedTemp, s.comfort, equipment, s.barn.humidity, switches);
   s.total += reward;
   trackStats(s.stats, s.barn, s.comfort, equipment);
 
